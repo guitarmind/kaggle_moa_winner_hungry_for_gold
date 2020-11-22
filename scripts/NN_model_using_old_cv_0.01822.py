@@ -12,8 +12,8 @@ import sys
 sys.path.append('../input/iterative-stratification/iterative-stratification-master')
 sys.path.append('../input/umaplearn/umap')
 
-get_ipython().run_line_magic('mkdir', 'model')
-get_ipython().run_line_magic('mkdir', 'interim')
+#get_ipython().run_line_magic('mkdir', 'model')
+#get_ipython().run_line_magic('mkdir', 'interim')
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
