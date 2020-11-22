@@ -95,10 +95,10 @@ print(f"PyTorch Lightning Version: {pl.__version__}")
 # In[2]:
 
 
-if kernel_mode:
-    get_ipython().system('mkdir -p /root/.cache/torch/hub/checkpoints/')
-    get_ipython().system('cp ../input/deepinsight-resnest-v1-resnest50/*.pth /root/.cache/torch/hub/checkpoints/')
-    get_ipython().system('ls -la /root/.cache/torch/hub/checkpoints/')
+# if kernel_mode:
+#     !mkdir -p /root/.cache/torch/hub/checkpoints/
+#     !cp ../input/deepinsight-resnest-v1-resnest50/*.pth /root/.cache/torch/hub/checkpoints/
+#     !ls -la /root/.cache/torch/hub/checkpoints/
 
 
 # In[3]:
