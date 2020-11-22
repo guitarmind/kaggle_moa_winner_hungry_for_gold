@@ -155,7 +155,7 @@ gradient_clip_val = 10.0
 
 if "resnest50" in model_type:
     batch_size = 128
-    infer_batch_size = 256 if not kernel_mode else 384
+    infer_batch_size = 256 if not kernel_mode else 256
     image_size = 224
     resolution = 224
 elif model_type == "resnest101":
