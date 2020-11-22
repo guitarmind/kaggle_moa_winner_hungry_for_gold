@@ -41,7 +41,7 @@ EfficientNet Setup Parameters:
 https://github.com/rwightman/gen-efficientnet-pytorch/blob/master/geffnet/gen_efficientnet.py#L502
 """
 
-kernel_mode = False
+kernel_mode = True
 training_mode = False
 
 import sys

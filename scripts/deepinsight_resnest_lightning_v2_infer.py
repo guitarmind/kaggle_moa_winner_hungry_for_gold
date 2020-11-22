@@ -23,7 +23,7 @@ ResNeSt:
 https://github.com/zhanghang1989/ResNeSt
 """
 
-kernel_mode = False
+kernel_mode = True
 training_mode = False
 
 import sys
@@ -94,6 +94,15 @@ rand_seed = 1120
 
 print(f"PyTorch Version: {torch.__version__}")
 print(f"PyTorch Lightning Version: {pl.__version__}")
+
+
+# In[ ]:
+
+
+if kernel_mode:
+    get_ipython().system('mkdir -p /root/.cache/torch/hub/checkpoints/')
+    get_ipython().system('cp ../input/deepinsight-resnest-v2-resnest50/*.pth /root/.cache/torch/hub/checkpoints/')
+    get_ipython().system('ls -la /root/.cache/torch/hub/checkpoints/')
 
 
 # In[5]:
