@@ -31,6 +31,7 @@ if kernel_mode:
     sys.path.insert(0, "../input/iterative-stratification")
     sys.path.insert(0, "../input/pytorch-lightning")
     sys.path.insert(0, "../input/resnest")
+    sys.path.insert(0, "../input/pytorch-optimizer")
 
 import os
 import numpy as np
