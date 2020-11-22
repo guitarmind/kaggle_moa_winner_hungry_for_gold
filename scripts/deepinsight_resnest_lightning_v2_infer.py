@@ -116,7 +116,7 @@ experiment_name = f"deepinsight_ResNeSt_v2_{model_type}"
 
 if kernel_mode:
     dataset_folder = "../input/lish-moa"
-    model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-resnest-v2-resnest50/{experiment_name}"
+    model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-resnest-v2-resnest50-output/{experiment_name}"
 else:
     dataset_folder = "/workspace/Kaggle/MoA"
     model_output_folder = f"{dataset_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_ResNeSt_v2_resnest50/{experiment_name}"
