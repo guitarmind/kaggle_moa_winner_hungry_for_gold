@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[4]:
 
 
 """
@@ -96,7 +96,7 @@ print(f"PyTorch Version: {torch.__version__}")
 print(f"PyTorch Lightning Version: {pl.__version__}")
 
 
-# In[2]:
+# In[5]:
 
 
 model_type = "resnest50"
@@ -182,7 +182,7 @@ final_drop = 0.2
 dropblock_prob = 0.0
 
 
-# In[3]:
+# In[6]:
 
 
 train_features = pd.read_csv(
@@ -1480,7 +1480,8 @@ submission = submission.reindex(columns=["sig_id"] + train_classes)
 submission[train_classes] = kfold_submit_preds
 # Set control type to 0 as control perturbations have no MoAs
 submission.loc[test_features['cp_type'] == 0, submission.columns[1:]] = 0
-submission.to_csv('submission.csv', index=False)
+# submission.to_csv('submission.csv', index=False)
+submission.to_csv('submission_resnest_v2.csv', index=False)
 
 
 # In[31]:
