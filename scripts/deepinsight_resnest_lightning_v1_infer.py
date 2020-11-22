@@ -26,6 +26,7 @@ if kernel_mode:
     sys.path.insert(0, "../input/pytorch-lightning")
     sys.path.insert(0, "../input/resnest")
     sys.path.insert(0, "../input/pytorch-optimizer")
+    sys.path.insert(0, "../input/pytorch-ranger")
 
 import os
 import numpy as np
