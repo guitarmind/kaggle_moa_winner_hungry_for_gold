@@ -149,7 +149,7 @@ if training_mode:
 # debug_mode = True
 debug_mode = False
 
-num_workers = 6
+num_workers = 2 if kernel_mode else 6
 # gpus = [0, 1]
 gpus = [0]
 # gpus = [1]
