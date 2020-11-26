@@ -54,6 +54,7 @@ KFOLDS = 10
 
 batch_size = 256
 # batch_size = 128
+# batch_size = 64
 
 label_smoothing_alpha = 0.0005
 
@@ -163,9 +164,6 @@ te = pd.get_dummies(te, columns=["cp_time", "cp_dose"])
 
 
 def preprocessor_1(test, seed, scaler=None, pca_gs=None, pca_cs=None):
-    n_gs = 2
-    n_cs = 100
-
     # g-mean, c-mean
     test_g_mean = test[gene_experssion_features].mean(axis=1)
 
@@ -244,9 +242,6 @@ for s in SEEDS:
         scaler_2 = load_pickle(model_output_folder, f"{file_name}_scaler_2")
         X_test_2, scaler_2 = preprocessor_2(second_Xtest, scaler_2)
 
-        y_valid_1 = Y[valid_index, :]
-        y_valid_2 = Y0[valid_index, :]
-
         n_features = X_test_1.shape[1]
         n_features_2 = X_test_2.shape[1]
 
@@ -314,9 +309,7 @@ for s in SEEDS:
                      metrics=logloss)
 
         # Load final model
-        m_nn = tf.keras.models.load_model(
-            f'{model_output_folder}/{file_name}_final.h5',
-            custom_objects={'logloss': logloss})
+        m_nn.load_weights(f'{model_output_folder}/{file_name}_final.h5')
 
         # Generate Submission Prediction #
         fold_submit_preds = m_nn.predict([X_test_1, X_test_2],
@@ -361,7 +354,7 @@ sub
 sub.iloc[test_features['cp_type'] == 'ctl_vehicle', 1:] = 0
 
 # Save Submission
-sub.to_csv('submission_2heads-looper-super-puper.csv', index=False)
+sub.to_csv('submission_improving-mark-s-2-heads-model.csv', index=False)
 # sub.to_csv('submission.csv', index=False)
 
 
