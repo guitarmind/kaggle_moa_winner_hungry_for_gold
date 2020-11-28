@@ -1680,7 +1680,7 @@ submission[train_classes] = kfold_submit_preds
 # Set control type to 0 as control perturbations have no MoAs
 submission.loc[test_features['cp_type'] == 0, submission.columns[1:]] = 0
 # submission.to_csv('submission.csv', index=False)
-submission.to_csv('submission_effnet_v7_b3.csv', index=False)
+submission.to_csv('submission_effnet_v7_b3_0.01850.csv', index=False)
 
 
 # In[34]:
