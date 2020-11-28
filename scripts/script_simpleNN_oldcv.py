@@ -636,7 +636,7 @@ def run_training(fold, seed):
 
     )
 
-    model.load_state_dict(torch.load(f"../input/simple-nn-using-old-cv/SEED{seed}_FOLD{fold}_.pth"))
+    model.load_state_dict(torch.load(f"{model_output_folder}/SEED{seed}_FOLD{fold}_.pth"))
     model.to(DEVICE)
 
  #   if not IS_TRAIN:
