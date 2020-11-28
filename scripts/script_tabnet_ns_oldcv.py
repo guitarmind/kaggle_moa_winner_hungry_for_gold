@@ -5,16 +5,19 @@
 
 # In[1]:
 
+kernel_mode = True
 
 import sys
 
 # for kaggle kernel
 # add datasets iterative-stratification and umaplearn
 
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
-sys.path.append('../input/umaplearn/umap')
-get_ipython().run_line_magic('mkdir', 'model')
-get_ipython().run_line_magic('mkdir', 'interim')
+if kernel_mode:
+    sys.path.append('../input/iterative-stratification')
+    sys.path.append('../input/umaplearn/umap')
+
+# get_ipython().run_line_magic('mkdir', 'model')
+# get_ipython().run_line_magic('mkdir', 'interim')
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
@@ -63,6 +66,12 @@ DEFAULT_SEED = 512
 seed_everything(seed_value=DEFAULT_SEED)
 
 
+dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
+model_output_folder = "../input/503-203-tabnet-with-nonscored-features-train" if kernel_mode \
+    else f"{dataset_folder}/503-203-tabnet-with-nonscored-features-train"
+BATCH_SIZE = 256
+
+
 # In[2]:
 
 
@@ -71,8 +80,8 @@ NB = '101'
 
 IS_TRAIN = False ################################################################
 
-MODEL_DIR = "../input/503-203-tabnet-with-nonscored-features-train/model" # "../model"
-INT_DIR = "interim" # "../interim"
+MODEL_DIR = f"{model_output_folder}/model"
+INT_DIR = f"{model_output_folder}/interim"
 
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -238,9 +247,9 @@ test = test.drop('cp_type', axis=1)
 
 # In[9]:
 
-
-train.to_pickle(f"{INT_DIR}/{NB}_train_preprocessed.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}_test_preprocessed.pkl")
+if IS_TRAIN:
+    train.to_pickle(f"{INT_DIR}/{NB}_train_preprocessed.pkl")
+    test.to_pickle(f"{INT_DIR}/{NB}_test_preprocessed.pkl")
 
 
 # ## 203-101-nonscored-pred-2layers.ipynb
@@ -271,7 +280,6 @@ HIDDEN_SIZE = 2048
 
 # training hyper params
 EPOCHS = 15
-BATCH_SIZE = 256
 NFOLDS = 10 # 10
 NREPEATS = 1
 NSEEDS = 5 # 5
@@ -623,8 +631,9 @@ print(f"CV loss: {valid_loss_total}")
 # In[28]:
 
 
-train.to_pickle(f"{INT_DIR}/{NB}_train_nonscored_pred.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}_test_nonscored_pred.pkl")
+if IS_TRAIN:
+    train.to_pickle(f"{INT_DIR}/{NB}_train_nonscored_pred.pkl")
+    test.to_pickle(f"{INT_DIR}/{NB}_test_nonscored_pred.pkl")
 
 
 # In[29]:
@@ -1214,9 +1223,9 @@ def run_seeds(train, test, feature_cols, target_cols, nfolds=NFOLDS, nseed=NSEED
 # In[59]:
 
 
-train.to_pickle(f"{INT_DIR}/{NB}_pre_train.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}_pre_test.pkl")
-
+if IS_TRAIN:
+    train.to_pickle(f"{INT_DIR}/{NB}_pre_train.pkl")
+    test.to_pickle(f"{INT_DIR}/{NB}_pre_test.pkl")
 
 # In[60]:
 
@@ -1227,8 +1236,9 @@ run_seeds(train, test, feature_cols, target_cols, NFOLDS, NSEEDS)
 # In[61]:
 
 
-train.to_pickle(f"{INT_DIR}/{NB}_train.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}_test.pkl")
+if IS_TRAIN:
+    train.to_pickle(f"{INT_DIR}/{NB}_train.pkl")
+    test.to_pickle(f"{INT_DIR}/{NB}_test.pkl")
 
 
 # In[62]:
@@ -1253,7 +1263,7 @@ print("CV log_loss: ", score)
 
 
 sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission.csv', index=False)
+sub.to_csv('submission_tabnet_ns_oldcv_0.01836.csv', index=False)
 
 
 # In[64]:
