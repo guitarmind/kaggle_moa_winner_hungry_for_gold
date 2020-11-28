@@ -68,7 +68,7 @@ seed_everything(seed_value=DEFAULT_SEED)
 
 dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
 model_output_folder = "../input/503-203-tabnet-with-nonscored-features-train" if kernel_mode \
-    else f"{dataset_folder}/503-203-tabnet-with-nonscored-features-train"
+    else f"{dataset_folder}/503-203-tabnet-with-nonscored-features-train-output"
 BATCH_SIZE = 256
 
 
