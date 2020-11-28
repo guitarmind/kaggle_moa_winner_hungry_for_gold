@@ -50,7 +50,7 @@ import warnings
 dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
 model_output_folder = "../input/kibuna-nn-hs-1024-last-train" if kernel_mode \
     else f"{dataset_folder}/kibuna-nn-hs-1024-last-train"
-BATCH_SIZE = 256
+BATCH_SIZE = 512
 
 
 # In[3]:

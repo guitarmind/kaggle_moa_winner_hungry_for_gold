@@ -179,7 +179,7 @@ if model_type == "b0":
     resolution = 224
 elif model_type == "b3":
     batch_size = 48
-    infer_batch_size = 96 if not kernel_mode else 256
+    infer_batch_size = 96 if not kernel_mode else 512
     image_size = 300  # B3
     drop_rate = 0.3  # B3
     resolution = 300
