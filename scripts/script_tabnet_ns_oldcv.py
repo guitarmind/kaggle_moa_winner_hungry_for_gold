@@ -97,12 +97,12 @@ SMAX = 1.0
 # In[3]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{dataset_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{dataset_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{dataset_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{dataset_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{dataset_folder}/sample_submission.csv')
 
 
 # In[4]:
@@ -540,12 +540,12 @@ def run_seeds(train, test, feature_cols, target_cols, nfolds=NFOLDS, nseed=NSEED
 # In[16]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{dataset_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{dataset_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{dataset_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{dataset_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{dataset_folder}/sample_submission.csv')
 
 
 # In[17]:
@@ -729,12 +729,12 @@ MAX_LR = 1e-2
 # In[34]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{dataset_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{dataset_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{dataset_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{dataset_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{dataset_folder}/sample_submission.csv')
 
 
 # In[35]:
