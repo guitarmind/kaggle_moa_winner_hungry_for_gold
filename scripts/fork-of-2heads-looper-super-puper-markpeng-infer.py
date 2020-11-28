@@ -7,7 +7,7 @@
 # Reference:
 # https://www.kaggle.com/demetrypascal/fork-of-2heads-looper-super-puper-plate/notebook
 
-kernel_mode = True
+kernel_mode = False
 
 
 # # Preparations
