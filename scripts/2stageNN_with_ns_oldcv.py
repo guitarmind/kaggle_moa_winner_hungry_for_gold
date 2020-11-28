@@ -7,7 +7,7 @@
 
 # In[1]:
 
-kernel_mode = False
+kernel_mode = True
 
 import sys
 if kernel_mode:
