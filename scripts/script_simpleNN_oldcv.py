@@ -7,7 +7,7 @@ kernel_mode = True
 
 import sys
 if kernel_mode:
-    sys.path.append('../input/iterativestratification')
+    sys.path.append('../input/iterative-stratification')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
 

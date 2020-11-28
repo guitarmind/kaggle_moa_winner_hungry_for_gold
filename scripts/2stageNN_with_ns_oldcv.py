@@ -12,7 +12,7 @@ kernel_mode = True
 import sys
 if kernel_mode:
     sys.path.append(
-        '../input/iterative-stratification/iterative-stratification-master')
+        '../input/iterative-stratification')
     sys.path.append('../input/umaplearn/umap')
 
 # get_ipython().run_line_magic('mkdir', 'model')
