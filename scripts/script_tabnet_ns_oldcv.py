@@ -15,6 +15,7 @@ import sys
 if kernel_mode:
     sys.path.append('../input/iterative-stratification')
     sys.path.append('../input/umaplearn/umap')
+    !pip install --no-index --find-links /kaggle/input/pytorchtabnet/pytorch_tabnet-2.0.0-py3-none-any.whl pytorch-tabnet
 
 # get_ipython().run_line_magic('mkdir', 'model')
 # get_ipython().run_line_magic('mkdir', 'interim')
@@ -658,7 +659,7 @@ print("CV log_loss: ", score)
 # In[30]:
 
 
-get_ipython().system('pip install --no-index --find-links /kaggle/input/pytorchtabnet/pytorch_tabnet-2.0.0-py3-none-any.whl pytorch-tabnet')
+# get_ipython().system('pip install --no-index --find-links /kaggle/input/pytorchtabnet/pytorch_tabnet-2.0.0-py3-none-any.whl pytorch-tabnet')
 
 
 # In[31]:
