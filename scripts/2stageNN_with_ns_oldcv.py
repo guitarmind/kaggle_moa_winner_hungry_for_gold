@@ -1,18 +1,22 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# - a notebook for inference with pre-trained models
+# - a notebook for inference with pre-trained models 
 # - all necessary models are stored in MODEL_DIR = "../input/kibuna-nn-hs-1024-last/model"
 #     - add the dataset created by kibuna NN hs:1024 last [TRAIN]
 
 # In[1]:
 
-kernel_mode = True
 
 import sys
-if kernel_mode:
-    sys.path.append('../input/iterative-stratification')
-    sys.path.append('../input/umaplearn/umap')
+sys.path.append('../input/iterative-stratification')
+sys.path.append('../input/umaplearn/umap')
+
+import os
+os.makedirs('model', exist_ok=True)
+os.makedirs('interim', exist_ok=True)
+
+BATCH_SIZE = 512
 
 # get_ipython().run_line_magic('mkdir', 'model')
 # get_ipython().run_line_magic('mkdir', 'interim')
@@ -32,7 +36,7 @@ import time
 from sklearn import preprocessing
 from sklearn.metrics import log_loss
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA, FactorAnalysis
+from sklearn.decomposition import PCA,FactorAnalysis
 from sklearn.manifold import TSNE
 
 import torch
@@ -47,10 +51,7 @@ import warnings
 # In[2]:
 
 
-dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
-model_output_folder = "../input/kibuna-nn-hs-1024-last-train" if kernel_mode \
-    else f"{dataset_folder}/kibuna-nn-hs-1024-last-train"
-BATCH_SIZE = 512
+torch.__version__
 
 
 # In[3]:
@@ -59,8 +60,8 @@ BATCH_SIZE = 512
 NB = '25'
 
 IS_TRAIN = False
-MODEL_DIR = f"{model_output_folder}/model"
-INT_DIR = f"{model_output_folder}/interim"
+MODEL_DIR = "../input/kibuna-nn-hs-1024-last-train/model" # "../model"
+INT_DIR = "interim" # "../interim"
 
 NSEEDS = 5  # 5
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -81,12 +82,12 @@ SMAX = 1.0
 # In[4]:
 
 
-train_features = pd.read_csv(f'{dataset_folder}/train_features.csv')
-train_targets_scored = pd.read_csv(f'{dataset_folder}/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv(f'{dataset_folder}/train_targets_nonscored.csv')
+train_features = pd.read_csv('../input/lish-moa/train_features.csv')
+train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
 
-test_features = pd.read_csv(f'{dataset_folder}/test_features.csv')
-sample_submission = pd.read_csv(f'{dataset_folder}/sample_submission.csv')
+test_features = pd.read_csv('../input/lish-moa/test_features.csv')
+sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
 
 
 # In[5]:
@@ -99,8 +100,7 @@ sample_submission = pd.read_csv(f'{dataset_folder}/sample_submission.csv')
 # In[6]:
 
 
-train_targets_nonscored = train_targets_nonscored.loc[
-    :, train_targets_nonscored.sum() != 0]
+train_targets_nonscored = train_targets_nonscored.loc[:, train_targets_nonscored.sum() != 0]
 print(train_targets_nonscored.shape)
 
 
@@ -112,8 +112,7 @@ print(train_targets_nonscored.shape)
 #         train_targets_scored[c] = np.maximum(PMIN, np.minimum(PMAX, train_targets_scored[c]))
 for c in train_targets_nonscored.columns:
     if c != "sig_id":
-        train_targets_nonscored[c] = np.maximum(
-            PMIN, np.minimum(PMAX, train_targets_nonscored[c]))
+        train_targets_nonscored[c] = np.maximum(PMIN, np.minimum(PMAX, train_targets_nonscored[c]))
 
 
 # In[8]:
@@ -144,11 +143,14 @@ def seed_everything(seed=1903):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
-
+    
 seed_everything(seed=1903)
 
 
 # In[ ]:
+
+
+
 
 
 # In[11]:
@@ -158,12 +160,10 @@ seed_everything(seed=1903)
 n_comp = 90
 n_dim = 45
 
-data = pd.concat([pd.DataFrame(train_features[GENES]),
-                  pd.DataFrame(test_features[GENES])])
+data = pd.concat([pd.DataFrame(train_features[GENES]), pd.DataFrame(test_features[GENES])])
 
 if IS_TRAIN:
-    fa = FactorAnalysis(n_components=n_comp,
-                        random_state=1903).fit(data[GENES])
+    fa = FactorAnalysis(n_components=n_comp, random_state=1903).fit(data[GENES])
     pd.to_pickle(fa, f'{MODEL_DIR}/{NB}_factor_analysis_g.pkl')
     umap = UMAP(n_components=n_dim, random_state=1903).fit(data[GENES])
     pd.to_pickle(umap, f'{MODEL_DIR}/{NB}_umap_g.pkl')
@@ -187,23 +187,21 @@ test3 = pd.DataFrame(test3, columns=[f'umap_G-{i}' for i in range(n_dim)])
 train_features = pd.concat((train_features, train2, train3), axis=1)
 test_features = pd.concat((test_features, test2, test3), axis=1)
 
-# CELLS
+#CELLS
 n_comp = 50
 n_dim = 25
 
-data = pd.concat([pd.DataFrame(train_features[CELLS]),
-                  pd.DataFrame(test_features[CELLS])])
+data = pd.concat([pd.DataFrame(train_features[CELLS]), pd.DataFrame(test_features[CELLS])])
 
 if IS_TRAIN:
-    fa = FactorAnalysis(n_components=n_comp,
-                        random_state=1903).fit(data[CELLS])
+    fa = FactorAnalysis(n_components=n_comp, random_state=1903).fit(data[CELLS])
     pd.to_pickle(fa, f'{MODEL_DIR}/{NB}_factor_analysis_c.pkl')
     umap = UMAP(n_components=n_dim, random_state=1903).fit(data[CELLS])
     pd.to_pickle(umap, f'{MODEL_DIR}/{NB}_umap_c.pkl')
 else:
     fa = pd.read_pickle(f'{MODEL_DIR}/{NB}_factor_analysis_c.pkl')
     umap = pd.read_pickle(f'{MODEL_DIR}/{NB}_umap_c.pkl')
-
+    
 data2 = (fa.transform(data[CELLS]))
 data3 = (umap.transform(data[CELLS]))
 
@@ -237,20 +235,16 @@ from sklearn.preprocessing import QuantileTransformer
 for col in (GENES + CELLS):
     vec_len = len(train_features[col].values)
     vec_len_test = len(test_features[col].values)
-    raw_vec = pd.concat([train_features, test_features])[
-        col].values.reshape(vec_len+vec_len_test, 1)
+    raw_vec = pd.concat([train_features, test_features])[col].values.reshape(vec_len+vec_len_test, 1)
     if IS_TRAIN:
-        transformer = QuantileTransformer(
-            n_quantiles=100, random_state=123, output_distribution="normal")
+        transformer = QuantileTransformer(n_quantiles=100, random_state=123, output_distribution="normal")
         transformer.fit(raw_vec)
         pd.to_pickle(transformer, f'{MODEL_DIR}/{NB}_{col}_quantile_transformer.pkl')
     else:
-        transformer = pd.read_pickle(f'{MODEL_DIR}/{NB}_{col}_quantile_transformer.pkl')
+        transformer = pd.read_pickle(f'{MODEL_DIR}/{NB}_{col}_quantile_transformer.pkl')        
 
-    train_features[col] = transformer.transform(
-        train_features[col].values.reshape(vec_len, 1)).reshape(1, vec_len)[0]
-    test_features[col] = transformer.transform(
-        test_features[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
+    train_features[col] = transformer.transform(train_features[col].values.reshape(vec_len, 1)).reshape(1, vec_len)[0]
+    test_features[col] = transformer.transform(test_features[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
 
 
 # In[14]:
@@ -278,8 +272,7 @@ for col in (GENES + CELLS):
 
 # # print(train2.shape)
 # train2 = pd.DataFrame(train2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
-# test2 = pd.DataFrame(test2, columns=[f'poly_C-{i}' for i in
-# range(train2.shape[1])])
+# test2 = pd.DataFrame(test2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
 
 # # drop_cols = [f'c-{i}' for i in range(n_comp,len(GENES))]
 # # train_features = pd.concat((train_features, train2, train3, train4, train5), axis=1)
@@ -300,8 +293,7 @@ for col in (GENES + CELLS):
 
 # # print(train2.shape)
 # train2 = pd.DataFrame(train2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
-# test2 = pd.DataFrame(test2, columns=[f'poly_C-{i}' for i in
-# range(train2.shape[1])])
+# test2 = pd.DataFrame(test2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
 
 # # drop_cols = [f'c-{i}' for i in range(n_comp,len(GENES))]
 # # train_features = pd.concat((train_features, train2, train3, train4, train5), axis=1)
@@ -320,14 +312,16 @@ print(test_features.shape)
 # In[ ]:
 
 
+
+
+
 # In[17]:
 
 
 # train = train_features.merge(train_targets_scored, on='sig_id')
 train = train_features.merge(train_targets_nonscored, on='sig_id')
-train = train[train['cp_type'] != 'ctl_vehicle'].reset_index(drop=True)
-test = test_features[test_features['cp_type']
-                     != 'ctl_vehicle'].reset_index(drop=True)
+train = train[train['cp_type']!='ctl_vehicle'].reset_index(drop=True)
+test = test_features[test_features['cp_type']!='ctl_vehicle'].reset_index(drop=True)
 
 # target = train[train_targets_scored.columns]
 target = train[train_targets_nonscored.columns]
@@ -384,33 +378,30 @@ print(sample_submission.shape)
 
 
 class MoADataset:
-
     def __init__(self, features, targets):
         self.features = features
         self.targets = targets
-
+        
     def __len__(self):
         return (self.features.shape[0])
-
+    
     def __getitem__(self, idx):
         dct = {
-            'x': torch.tensor(self.features[idx, :], dtype=torch.float),
-            'y': torch.tensor(self.targets[idx, :], dtype=torch.float)
+            'x' : torch.tensor(self.features[idx, :], dtype=torch.float),
+            'y' : torch.tensor(self.targets[idx, :], dtype=torch.float)            
         }
         return dct
-
-
+    
 class TestDataset:
-
     def __init__(self, features):
         self.features = features
-
+        
     def __len__(self):
         return (self.features.shape[0])
-
+    
     def __getitem__(self, idx):
         dct = {
-            'x': torch.tensor(self.features[idx, :], dtype=torch.float)
+            'x' : torch.tensor(self.features[idx, :], dtype=torch.float)
         }
         return dct
 
@@ -421,7 +412,7 @@ class TestDataset:
 def train_fn(model, optimizer, scheduler, loss_fn, dataloader, device):
     model.train()
     final_loss = 0
-
+    
     for data in dataloader:
         optimizer.zero_grad()
         inputs, targets = data['x'].to(device), data['y'].to(device)
@@ -431,11 +422,11 @@ def train_fn(model, optimizer, scheduler, loss_fn, dataloader, device):
         loss.backward()
         optimizer.step()
         scheduler.step()
-
+        
         final_loss += loss.item()
-
+        
     final_loss /= len(dataloader)
-
+    
     return final_loss
 
 
@@ -443,35 +434,34 @@ def valid_fn(model, loss_fn, dataloader, device):
     model.eval()
     final_loss = 0
     valid_preds = []
-
+    
     for data in dataloader:
         inputs, targets = data['x'].to(device), data['y'].to(device)
         outputs = model(inputs)
         loss = loss_fn(outputs, targets)
-
+        
         final_loss += loss.item()
         valid_preds.append(outputs.sigmoid().detach().cpu().numpy())
-
+        
     final_loss /= len(dataloader)
     valid_preds = np.concatenate(valid_preds)
-
+    
     return final_loss, valid_preds
-
 
 def inference_fn(model, dataloader, device):
     model.eval()
     preds = []
-
+    
     for data in dataloader:
         inputs = data['x'].to(device)
 
         with torch.no_grad():
             outputs = model(inputs)
-
+        
         preds.append(outputs.sigmoid().detach().cpu().numpy())
-
+        
     preds = np.concatenate(preds)
-
+    
     return preds
 
 
@@ -479,35 +469,33 @@ def inference_fn(model, dataloader, device):
 
 
 class Model(nn.Module):
-
     def __init__(self, num_features, num_targets, hidden_size):
         super(Model, self).__init__()
         self.batch_norm1 = nn.BatchNorm1d(num_features)
         self.dropout1 = nn.Dropout(0.15)
-        self.dense1 = nn.utils.weight_norm(
-            nn.Linear(num_features, hidden_size))
-
+        self.dense1 = nn.utils.weight_norm(nn.Linear(num_features, hidden_size))
+        
         self.batch_norm2 = nn.BatchNorm1d(hidden_size)
         self.dropout2 = nn.Dropout(0.3)
         self.dense2 = nn.Linear(hidden_size, hidden_size)
-
+        
         self.batch_norm3 = nn.BatchNorm1d(hidden_size)
         self.dropout3 = nn.Dropout(0.25)
         self.dense3 = nn.utils.weight_norm(nn.Linear(hidden_size, num_targets))
-
+    
     def forward(self, x):
         x = self.batch_norm1(x)
         x = self.dropout1(x)
         x = F.leaky_relu(self.dense1(x))
-
+        
         x = self.batch_norm2(x)
         x = self.dropout2(x)
         x = F.leaky_relu(self.dense2(x))
-
+        
         x = self.batch_norm3(x)
         x = self.dropout3(x)
         x = self.dense3(x)
-
+        
         return x
 
 
@@ -515,29 +503,29 @@ class Model(nn.Module):
 
 
 def process_data(data):
-
-    data = pd.get_dummies(data, columns=['cp_time', 'cp_dose'])
+    
+    data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
 #     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2})
 #     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1})
 
 # --------------------- Normalize ---------------------
 #     for col in GENES:
 #         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-
+    
 #     for col in CELLS:
 #         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-
+    
 #--------------------- Removing Skewness ---------------------
 #     for col in GENES + CELLS:
 #         if(abs(data[col].skew()) > 0.75):
-
+            
 #             if(data[col].skew() < 0): # neg-skewness
 #                 data[col] = data[col].max() - data[col] + 1
 #                 data[col] = np.sqrt(data[col])
-
+            
 #             else:
 #                 data[col] = np.sqrt(data[col])
-
+    
     return data
 
 
@@ -545,16 +533,16 @@ def process_data(data):
 
 
 feature_cols = [c for c in process_data(folds).columns if c not in target_cols]
-feature_cols = [c for c in feature_cols if c not in ['kfold', 'sig_id']]
+feature_cols = [c for c in feature_cols if c not in ['kfold','sig_id']]
 len(feature_cols)
 
 
 # In[28]:
 
 
-num_features = len(feature_cols)
-num_targets = len(target_cols)
-hidden_size = 2048
+num_features=len(feature_cols)
+num_targets=len(target_cols)
+hidden_size=2048
 # hidden_size=4096
 # hidden_size=9192
 
@@ -563,62 +551,55 @@ hidden_size = 2048
 
 
 def run_training(fold, seed):
-
+    
     seed_everything(seed)
-
+    
     train = process_data(folds)
     test_ = process_data(test)
-
+    
     trn_idx = train[train['kfold'] != fold].index
     val_idx = train[train['kfold'] == fold].index
-
+    
     train_df = train[train['kfold'] != fold].reset_index(drop=True)
     valid_df = train[train['kfold'] == fold].reset_index(drop=True)
-
-    x_train, y_train = train_df[
-        feature_cols].values, train_df[target_cols].values
-    x_valid, y_valid = valid_df[
-        feature_cols].values, valid_df[target_cols].values
-
+    
+    x_train, y_train  = train_df[feature_cols].values, train_df[target_cols].values
+    x_valid, y_valid =  valid_df[feature_cols].values, valid_df[target_cols].values
+    
     train_dataset = MoADataset(x_train, y_train)
     valid_dataset = MoADataset(x_valid, y_valid)
-    trainloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    validloader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    
     model = Model(
         num_features=num_features,
         num_targets=num_targets,
         hidden_size=hidden_size,
     )
-
+    
     model.to(DEVICE)
-
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000,
-# max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
-    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3,
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000, 
+#                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
+    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3, 
                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     loss_fn = nn.BCEWithLogitsLoss()
-
+    
     early_stopping_steps = EARLY_STOPPING_STEPS
     early_step = 0
-
+    
     oof = np.zeros((len(train), target.iloc[:, 1:].shape[1]))
     best_loss = np.inf
     best_loss_epoch = -1
-
+    
     if IS_TRAIN:
         for epoch in range(EPOCHS):
 
-            train_loss = train_fn(
-                model, optimizer, scheduler, loss_fn, trainloader, DEVICE)
-            valid_loss, valid_preds = valid_fn(
-                model, loss_fn, validloader, DEVICE)
+            train_loss = train_fn(model, optimizer, scheduler, loss_fn, trainloader, DEVICE)
+            valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
 
-            if valid_loss < best_loss:
+            if valid_loss < best_loss:            
                 best_loss = valid_loss
                 best_loss_epoch = epoch
                 oof[val_idx] = valid_preds
@@ -630,30 +611,29 @@ def run_training(fold, seed):
                     break
 
             if epoch % 10 == 0 or epoch == EPOCHS-1:
-                print(f"seed: {seed}, FOLD: {fold}, EPOCH: {epoch}, train_loss: {train_loss:.6f}, valid_loss: {valid_loss:.6f}, best_loss: {best_loss:.6f}, best_loss_epoch: {best_loss_epoch}")
-
+                print(f"seed: {seed}, FOLD: {fold}, EPOCH: {epoch}, train_loss: {train_loss:.6f}, valid_loss: {valid_loss:.6f}, best_loss: {best_loss:.6f}, best_loss_epoch: {best_loss_epoch}")            
+    
     #--------------------- PREDICTION---------------------
     x_test = test_[feature_cols].values
     testdataset = TestDataset(x_test)
-    testloader = torch.utils.data.DataLoader(
-        testdataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    testloader = torch.utils.data.DataLoader(testdataset, batch_size=BATCH_SIZE, shuffle=False)
+    
     model = Model(
         num_features=num_features,
         num_targets=num_targets,
         hidden_size=hidden_size,
     )
-
+    
     model.load_state_dict(torch.load(f"{MODEL_DIR}/{NB}-nonscored-SEED{seed}-FOLD{fold}_.pth"))
     model.to(DEVICE)
-
+    
     if not IS_TRAIN:
         valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
-        oof[val_idx] = valid_preds
-
+        oof[val_idx] = valid_preds    
+    
     predictions = np.zeros((len(test_), target.iloc[:, 1:].shape[1]))
     predictions = inference_fn(model, testloader, DEVICE)
-
+    
     return oof, predictions
 
 
@@ -663,27 +643,27 @@ def run_training(fold, seed):
 def run_k_fold(NFOLDS, seed):
     oof = np.zeros((len(train), len(target_cols)))
     predictions = np.zeros((len(test), len(target_cols)))
-
+    
     for fold in range(NFOLDS):
         oof_, pred_ = run_training(fold, seed)
-
+        
         predictions += pred_ / NFOLDS
         oof += oof_
-
+        
     return oof, predictions
 
 
 # In[31]:
 
 
-SEED = range(NSEEDS)  # [0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
+SEED = range(NSEEDS)  #[0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
 oof = np.zeros((len(train), len(target_cols)))
 predictions = np.zeros((len(test), len(target_cols)))
 
 time_start = time.time()
 
 for seed in SEED:
-
+    
     oof_, predictions_ = run_k_fold(NFOLDS, seed)
     oof += oof_ / len(SEED)
     predictions += predictions_ / len(SEED)
@@ -699,9 +679,8 @@ print(predictions.shape)
 # In[32]:
 
 
-if IS_TRAIN:
-    train.to_pickle(f"{INT_DIR}/{NB}-train_nonscore_pred.pkl")
-    test.to_pickle(f"{INT_DIR}/{NB}-test_nonscore_pred.pkl")
+train.to_pickle(f"{INT_DIR}/{NB}-train_nonscore_pred.pkl")
+test.to_pickle(f"{INT_DIR}/{NB}-test_nonscore_pred.pkl")
 
 
 # In[33]:
@@ -714,8 +693,7 @@ len(target_cols)
 
 
 train[target_cols] = np.maximum(PMIN, np.minimum(PMAX, train[target_cols]))
-valid_results = train_targets_nonscored.drop(columns=target_cols).merge(
-    train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
+valid_results = train_targets_nonscored.drop(columns=target_cols).merge(train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 
 y_true = train_targets_nonscored[target_cols].values
 y_true = y_true > 0.5
@@ -725,7 +703,7 @@ score = 0
 for i in range(len(target_cols)):
     score_ = log_loss(y_true[:, i], y_pred[:, i])
     score += score_ / target.shape[1]
-
+    
 print("CV log_loss: ", score)
 
 
@@ -737,6 +715,7 @@ print("CV log_loss: ", score)
 # CV log_loss:  0.01436484670778641 # more hidden nodes
 
 # In[35]:
+
 
 
 EPOCHS = 25
@@ -753,8 +732,7 @@ EPOCHS = 25
 # In[37]:
 
 
-nonscored_target = [c for c in train[
-    train_targets_nonscored.columns] if c != "sig_id"]
+nonscored_target = [c for c in train[train_targets_nonscored.columns] if c != "sig_id"]
 
 
 # In[38]:
@@ -797,16 +775,14 @@ for col in (nonscored_target):
     vec_len_test = len(test[col].values)
     raw_vec = train[col].values.reshape(vec_len, 1)
     if IS_TRAIN:
-        transformer = QuantileTransformer(
-            n_quantiles=100, random_state=0, output_distribution="normal")
+        transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
         transformer.fit(raw_vec)
         pd.to_pickle(transformer, f"{MODEL_DIR}/{NB}_{col}_quantile_nonscored.pkl")
     else:
         transformer = pd.read_pickle(f"{MODEL_DIR}/{NB}_{col}_quantile_nonscored.pkl")
 
     train[col] = transformer.transform(raw_vec).reshape(1, vec_len)[0]
-    test[col] = transformer.transform(test[col].values.reshape(
-        vec_len_test, 1)).reshape(1, vec_len_test)[0]
+    test[col] = transformer.transform(test[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
 
 
 # In[42]:
@@ -849,29 +825,29 @@ print(sample_submission.shape)
 
 
 def process_data(data):
-
-    data = pd.get_dummies(data, columns=['cp_time', 'cp_dose'])
+    
+    data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
 #     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2})
 #     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1})
 
 # --------------------- Normalize ---------------------
 #     for col in GENES:
 #         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-
+    
 #     for col in CELLS:
 #         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-
+    
 #--------------------- Removing Skewness ---------------------
 #     for col in GENES + CELLS:
 #         if(abs(data[col].skew()) > 0.75):
-
+            
 #             if(data[col].skew() < 0): # neg-skewness
 #                 data[col] = data[col].max() - data[col] + 1
 #                 data[col] = np.sqrt(data[col])
-
+            
 #             else:
 #                 data[col] = np.sqrt(data[col])
-
+    
     return data
 
 
@@ -879,16 +855,16 @@ def process_data(data):
 
 
 feature_cols = [c for c in process_data(folds).columns if c not in target_cols]
-feature_cols = [c for c in feature_cols if c not in ['kfold', 'sig_id']]
+feature_cols = [c for c in feature_cols if c not in ['kfold','sig_id']]
 len(feature_cols)
 
 
 # In[48]:
 
 
-num_features = len(feature_cols)
-num_targets = len(target_cols)
-hidden_size = 2048
+num_features=len(feature_cols)
+num_targets=len(target_cols)
+hidden_size=2048
 # hidden_size=4096
 # hidden_size=9192
 
@@ -897,62 +873,55 @@ hidden_size = 2048
 
 
 def run_training(fold, seed):
-
+    
     seed_everything(seed)
-
+    
     train = process_data(folds)
     test_ = process_data(test)
-
+    
     trn_idx = train[train['kfold'] != fold].index
     val_idx = train[train['kfold'] == fold].index
-
+    
     train_df = train[train['kfold'] != fold].reset_index(drop=True)
     valid_df = train[train['kfold'] == fold].reset_index(drop=True)
-
-    x_train, y_train = train_df[
-        feature_cols].values, train_df[target_cols].values
-    x_valid, y_valid = valid_df[
-        feature_cols].values, valid_df[target_cols].values
-
+    
+    x_train, y_train  = train_df[feature_cols].values, train_df[target_cols].values
+    x_valid, y_valid =  valid_df[feature_cols].values, valid_df[target_cols].values
+    
     train_dataset = MoADataset(x_train, y_train)
     valid_dataset = MoADataset(x_valid, y_valid)
-    trainloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    validloader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    
     model = Model(
         num_features=num_features,
         num_targets=num_targets,
         hidden_size=hidden_size,
     )
-
+    
     model.to(DEVICE)
-
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000,
-# max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
-    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3,
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000, 
+#                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
+    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3, 
                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     loss_fn = nn.BCEWithLogitsLoss()
-
+    
     early_stopping_steps = EARLY_STOPPING_STEPS
     early_step = 0
-
+    
     oof = np.zeros((len(train), target.iloc[:, 1:].shape[1]))
     best_loss = np.inf
     best_loss_epoch = -1
-
+    
     if IS_TRAIN:
         for epoch in range(EPOCHS):
 
-            train_loss = train_fn(
-                model, optimizer, scheduler, loss_fn, trainloader, DEVICE)
-            valid_loss, valid_preds = valid_fn(
-                model, loss_fn, validloader, DEVICE)
+            train_loss = train_fn(model, optimizer, scheduler, loss_fn, trainloader, DEVICE)
+            valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
 
-            if valid_loss < best_loss:
+            if valid_loss < best_loss:            
                 best_loss = valid_loss
                 best_loss_epoch = epoch
                 oof[val_idx] = valid_preds
@@ -964,30 +933,29 @@ def run_training(fold, seed):
                     break
 
             if epoch % 10 == 0 or epoch == EPOCHS-1:
-                print(f"seed: {seed}, FOLD: {fold}, EPOCH: {epoch}, train_loss: {train_loss:.6f}, valid_loss: {valid_loss:.6f}, best_loss: {best_loss:.6f}, best_loss_epoch: {best_loss_epoch}")
-
+                print(f"seed: {seed}, FOLD: {fold}, EPOCH: {epoch}, train_loss: {train_loss:.6f}, valid_loss: {valid_loss:.6f}, best_loss: {best_loss:.6f}, best_loss_epoch: {best_loss_epoch}")            
+   
     #--------------------- PREDICTION---------------------
     x_test = test_[feature_cols].values
     testdataset = TestDataset(x_test)
-    testloader = torch.utils.data.DataLoader(
-        testdataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    testloader = torch.utils.data.DataLoader(testdataset, batch_size=BATCH_SIZE, shuffle=False)
+    
     model = Model(
         num_features=num_features,
         num_targets=num_targets,
         hidden_size=hidden_size,
     )
-
+    
     model.load_state_dict(torch.load(f"{MODEL_DIR}/{NB}-scored-SEED{seed}-FOLD{fold}_.pth"))
     model.to(DEVICE)
-
+    
     if not IS_TRAIN:
         valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
-        oof[val_idx] = valid_preds
-
+        oof[val_idx] = valid_preds    
+    
     predictions = np.zeros((len(test_), target.iloc[:, 1:].shape[1]))
     predictions = inference_fn(model, testloader, DEVICE)
-
+    
     return oof, predictions
 
 
@@ -997,27 +965,27 @@ def run_training(fold, seed):
 def run_k_fold(NFOLDS, seed):
     oof = np.zeros((len(train), len(target_cols)))
     predictions = np.zeros((len(test), len(target_cols)))
-
+    
     for fold in range(NFOLDS):
         oof_, pred_ = run_training(fold, seed)
-
+        
         predictions += pred_ / NFOLDS
         oof += oof_
-
+        
     return oof, predictions
 
 
 # In[51]:
 
 
-SEED = range(NSEEDS)  # [0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
+SEED = range(NSEEDS)  #[0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
 oof = np.zeros((len(train), len(target_cols)))
 predictions = np.zeros((len(test), len(target_cols)))
 
 time_start = time.time()
 
 for seed in SEED:
-
+    
     oof_, predictions_ = run_k_fold(NFOLDS, seed)
     oof += oof_ / len(SEED)
     predictions += predictions_ / len(SEED)
@@ -1030,9 +998,8 @@ test[target_cols] = predictions
 # In[52]:
 
 
-if IS_TRAIN:
-    train.to_pickle(f"{INT_DIR}/{NB}-train-score-pred.pkl")
-    test.to_pickle(f"{INT_DIR}/{NB}-test-score-pred.pkl")
+train.to_pickle(f"{INT_DIR}/{NB}-train-score-pred.pkl")
+test.to_pickle(f"{INT_DIR}/{NB}-test-score-pred.pkl")
 
 
 # In[53]:
@@ -1046,8 +1013,7 @@ len(target_cols)
 
 train[target_cols] = np.maximum(PMIN, np.minimum(PMAX, train[target_cols]))
 
-valid_results = train_targets_scored.drop(columns=target_cols).merge(
-    train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
+valid_results = train_targets_scored.drop(columns=target_cols).merge(train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 
 y_true = train_targets_scored[target_cols].values
 y_true = y_true > 0.5
@@ -1057,7 +1023,7 @@ score = 0
 for i in range(len(target_cols)):
     score_ = log_loss(y_true[:, i], y_pred[:, i])
     score += score_ / target.shape[1]
-
+    
 print("CV log_loss: ", score)
 
 
@@ -1068,7 +1034,7 @@ print("CV log_loss: ", score)
 # - CV log_loss:  0.014353604854355429 # more umap features
 # - CV log_loss:  0.01436484670778641 # more hidden nodes
 # - CV log_loss:  0.014344688083211073
-#   - using predicted unscored targets as feature
+#   - using predicted unscored targets as feature 
 # - CV log_loss:  0.013368097791623873
 #   - using given unscored targets as feature
 #   - bad in public lb
@@ -1113,8 +1079,7 @@ PMIN = 0.0005
 PMAX = 0.9995
 for c in train_targets_scored.columns:
     if c != "sig_id":
-        train_targets_scored[c] = np.maximum(
-            PMIN, np.minimum(PMAX, train_targets_scored[c]))
+        train_targets_scored[c] = np.maximum(PMIN, np.minimum(PMAX, train_targets_scored[c]))
 
 
 # In[59]:
@@ -1127,16 +1092,14 @@ train_targets_scored.columns
 
 
 train = train[train_targets_scored.columns]
-train.columns = [
-    c + "_pred" if (c != 'sig_id' and c in train_targets_scored.columns) else c for c in train.columns]
+train.columns = [c + "_pred" if (c != 'sig_id' and c in train_targets_scored.columns) else c for c in train.columns]
 
 
 # In[61]:
 
 
 test = test[train_targets_scored.columns]
-test.columns = [
-    c + "_pred" if (c != 'sig_id' and c in train_targets_scored.columns) else c for c in test.columns]
+test.columns = [c + "_pred" if (c != 'sig_id' and c in train_targets_scored.columns) else c for c in test.columns]
 
 
 # In[62]:
@@ -1175,27 +1138,24 @@ target = train[train_targets_scored.columns]
 
 from sklearn.preprocessing import QuantileTransformer
 
-scored_target_pred = [
-    c + "_pred" for c in train_targets_scored.columns if c != 'sig_id']
+scored_target_pred = [c + "_pred" for c in train_targets_scored.columns if c != 'sig_id']
 
 for col in (scored_target_pred):
 
-    #     transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
+#     transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
     vec_len = len(train[col].values)
     vec_len_test = len(test[col].values)
     raw_vec = train[col].values.reshape(vec_len, 1)
 #     transformer.fit(raw_vec)
     if IS_TRAIN:
-        transformer = QuantileTransformer(
-            n_quantiles=100, random_state=0, output_distribution="normal")
+        transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
         transformer.fit(raw_vec)
         pd.to_pickle(transformer, f"{MODEL_DIR}/{NB}_{col}_quantile_scored.pkl")
     else:
         transformer = pd.read_pickle(f"{MODEL_DIR}/{NB}_{col}_quantile_scored.pkl")
 
     train[col] = transformer.transform(raw_vec).reshape(1, vec_len)[0]
-    test[col] = transformer.transform(test[col].values.reshape(
-        vec_len_test, 1)).reshape(1, vec_len_test)[0]
+    test[col] = transformer.transform(test[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
 
 
 # In[66]:
@@ -1251,29 +1211,29 @@ folds
 
 
 def process_data(data):
+    
+#     data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
+#     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2, 0:0, 1:1, 2:2})
+#     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1, 0:0, 1:1})
 
-    #     data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
-    #     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2, 0:0, 1:1, 2:2})
-    #     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1, 0:0, 1:1})
-
-    # --------------------- Normalize ---------------------
-    #     for col in GENES:
-    #         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-
-    #     for col in CELLS:
-    #         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-
-    #--------------------- Removing Skewness ---------------------
-    #     for col in GENES + CELLS:
-    #         if(abs(data[col].skew()) > 0.75):
-
-    #             if(data[col].skew() < 0): # neg-skewness
-    #                 data[col] = data[col].max() - data[col] + 1
-    #                 data[col] = np.sqrt(data[col])
-
-    #             else:
-    #                 data[col] = np.sqrt(data[col])
-
+# --------------------- Normalize ---------------------
+#     for col in GENES:
+#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
+    
+#     for col in CELLS:
+#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
+    
+#--------------------- Removing Skewness ---------------------
+#     for col in GENES + CELLS:
+#         if(abs(data[col].skew()) > 0.75):
+            
+#             if(data[col].skew() < 0): # neg-skewness
+#                 data[col] = data[col].max() - data[col] + 1
+#                 data[col] = np.sqrt(data[col])
+            
+#             else:
+#                 data[col] = np.sqrt(data[col])
+    
     return data
 
 
@@ -1281,7 +1241,7 @@ def process_data(data):
 
 
 feature_cols = [c for c in folds.columns if c not in target_cols]
-feature_cols = [c for c in feature_cols if c not in ['kfold', 'sig_id']]
+feature_cols = [c for c in feature_cols if c not in ['kfold','sig_id']]
 len(feature_cols)
 
 
@@ -1301,9 +1261,9 @@ folds
 
 
 EPOCHS = 25
-num_features = len(feature_cols)
-num_targets = len(target_cols)
-hidden_size = 1024
+num_features=len(feature_cols)
+num_targets=len(target_cols)
+hidden_size=1024
 # hidden_size=4096
 # hidden_size=9192
 
@@ -1312,62 +1272,55 @@ hidden_size = 1024
 
 
 def run_training(fold, seed):
-
+    
     seed_everything(seed)
-
+    
     train = process_data(folds)
     test_ = process_data(test)
-
+    
     trn_idx = train[train['kfold'] != fold].index
     val_idx = train[train['kfold'] == fold].index
-
+    
     train_df = train[train['kfold'] != fold].reset_index(drop=True)
     valid_df = train[train['kfold'] == fold].reset_index(drop=True)
-
-    x_train, y_train = train_df[
-        feature_cols].values, train_df[target_cols].values
-    x_valid, y_valid = valid_df[
-        feature_cols].values, valid_df[target_cols].values
-
+    
+    x_train, y_train  = train_df[feature_cols].values, train_df[target_cols].values
+    x_valid, y_valid =  valid_df[feature_cols].values, valid_df[target_cols].values
+    
     train_dataset = MoADataset(x_train, y_train)
     valid_dataset = MoADataset(x_valid, y_valid)
-    trainloader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    validloader = torch.utils.data.DataLoader(
-        valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    
     model = Model(
         num_features=num_features,
         num_targets=num_targets,
         hidden_size=hidden_size,
     )
-
+    
     model.to(DEVICE)
-
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000,
-# max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
-    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3,
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000, 
+#                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
+    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3, 
                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     loss_fn = nn.BCEWithLogitsLoss()
-
+    
     early_stopping_steps = EARLY_STOPPING_STEPS
     early_step = 0
-
+    
     oof = np.zeros((len(train), target.iloc[:, 1:].shape[1]))
     best_loss = np.inf
     best_loss_epoch = -1
-
+    
     if IS_TRAIN:
         for epoch in range(EPOCHS):
 
-            train_loss = train_fn(
-                model, optimizer, scheduler, loss_fn, trainloader, DEVICE)
-            valid_loss, valid_preds = valid_fn(
-                model, loss_fn, validloader, DEVICE)
+            train_loss = train_fn(model, optimizer, scheduler, loss_fn, trainloader, DEVICE)
+            valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
 
-            if valid_loss < best_loss:
+            if valid_loss < best_loss:            
                 best_loss = valid_loss
                 best_loss_epoch = epoch
                 oof[val_idx] = valid_preds
@@ -1378,30 +1331,29 @@ def run_training(fold, seed):
                     break
 
             if epoch % 10 == 0 or epoch == EPOCHS-1:
-                print(f"seed: {seed}, FOLD: {fold}, EPOCH: {epoch}, train_loss: {train_loss:.6f}, valid_loss: {valid_loss:.6f}, best_loss: {best_loss:.6f}, best_loss_epoch: {best_loss_epoch}")
-
+                print(f"seed: {seed}, FOLD: {fold}, EPOCH: {epoch}, train_loss: {train_loss:.6f}, valid_loss: {valid_loss:.6f}, best_loss: {best_loss:.6f}, best_loss_epoch: {best_loss_epoch}")                           
+    
     #--------------------- PREDICTION---------------------
     x_test = test_[feature_cols].values
     testdataset = TestDataset(x_test)
-    testloader = torch.utils.data.DataLoader(
-        testdataset, batch_size=BATCH_SIZE, shuffle=False)
-
+    testloader = torch.utils.data.DataLoader(testdataset, batch_size=BATCH_SIZE, shuffle=False)
+    
     model = Model(
         num_features=num_features,
         num_targets=num_targets,
         hidden_size=hidden_size,
     )
-
+    
     model.load_state_dict(torch.load(f"{MODEL_DIR}/{NB}-scored2-SEED{seed}-FOLD{fold}_.pth"))
     model.to(DEVICE)
-
+    
     if not IS_TRAIN:
         valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
-        oof[val_idx] = valid_preds
-
+        oof[val_idx] = valid_preds     
+    
     predictions = np.zeros((len(test_), target.iloc[:, 1:].shape[1]))
     predictions = inference_fn(model, testloader, DEVICE)
-
+    
     return oof, predictions
 
 
@@ -1411,13 +1363,13 @@ def run_training(fold, seed):
 def run_k_fold(NFOLDS, seed):
     oof = np.zeros((len(train), len(target_cols)))
     predictions = np.zeros((len(test), len(target_cols)))
-
+    
     for fold in range(NFOLDS):
         oof_, pred_ = run_training(fold, seed)
-
+        
         predictions += pred_ / NFOLDS
         oof += oof_
-
+        
     return oof, predictions
 
 
@@ -1431,7 +1383,7 @@ predictions = np.zeros((len(test), len(target_cols)))
 time_start = time.time()
 
 for seed in SEED:
-
+    
     oof_, predictions_ = run_k_fold(NFOLDS, seed)
     oof += oof_ / len(SEED)
     predictions += predictions_ / len(SEED)
@@ -1444,17 +1396,15 @@ test[target_cols] = predictions
 # In[80]:
 
 
-if IS_TRAIN:
-    train.to_pickle(f"{INT_DIR}/{NB}-train-score-stack-pred.pkl")
-    test.to_pickle(f"{INT_DIR}/{NB}-test-score-stack-pred.pkl")
+train.to_pickle(f"{INT_DIR}/{NB}-train-score-stack-pred.pkl")
+test.to_pickle(f"{INT_DIR}/{NB}-test-score-stack-pred.pkl")
 
 
 # In[81]:
 
 
 train[target_cols] = np.maximum(PMIN, np.minimum(PMAX, train[target_cols]))
-valid_results = train_targets_scored.drop(columns=target_cols).merge(
-    train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
+valid_results = train_targets_scored.drop(columns=target_cols).merge(train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 
 y_true = train_targets_scored[target_cols].values
 y_true = y_true > 0.5
@@ -1466,7 +1416,7 @@ score = 0
 for i in range(len(target_cols)):
     score_ = log_loss(y_true[:, i], y_pred[:, i])
     score += score_ / target.shape[1]
-
+    
 print("CV log_loss: ", score)
 
 
@@ -1477,8 +1427,7 @@ print("CV log_loss: ", score)
 #     if c != "sig_id":
 #         test[c] = np.maximum(PMIN, np.minimum(PMAX, test[c]))
 
-sub = sample_submission.drop(columns=target_cols).merge(
-    test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
+sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 sub.to_csv('submission_2stageNN_with_ns_oldcv_0.01822.csv', index=False)
 
 
@@ -1491,10 +1440,23 @@ sub
 # In[ ]:
 
 
-# In[ ]:
 
-
-# In[ ]:
 
 
 # In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+

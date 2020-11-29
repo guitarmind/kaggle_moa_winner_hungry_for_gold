@@ -19,6 +19,8 @@ import os
 os.makedirs('model', exist_ok=True)
 os.makedirs('interim', exist_ok=True)
 
+BATCH_SIZE = 512
+
 # get_ipython().run_line_magic('mkdir', 'model')
 # get_ipython().run_line_magic('mkdir', 'interim')
 
@@ -277,7 +279,6 @@ HIDDEN_SIZE = 2048
 
 # training hyper params
 EPOCHS = 15
-BATCH_SIZE = 256
 NFOLDS = 10 # 10
 NREPEATS = 1
 NSEEDS = 5 # 5
