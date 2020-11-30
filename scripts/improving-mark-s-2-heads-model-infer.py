@@ -52,7 +52,7 @@ os.makedirs(model_output_folder, exist_ok=True)
 SEEDS = [23, 228, 1488, 1998, 2208, 2077, 404]
 KFOLDS = 10
 
-batch_size = 512
+batch_size = 2048
 # batch_size = 128
 # batch_size = 64
 

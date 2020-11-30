@@ -12,7 +12,7 @@ import sys
 sys.path.append('../input/iterative-stratification')
 sys.path.append('../input/umaplearn/umap')
 
-BATCH_SIZE = 512
+BATCH_SIZE = 2048
 
 # %mkdir model
 # %mkdir interim

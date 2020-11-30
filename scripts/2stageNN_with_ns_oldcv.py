@@ -16,7 +16,7 @@ import os
 os.makedirs('model', exist_ok=True)
 os.makedirs('interim', exist_ok=True)
 
-BATCH_SIZE = 512
+BATCH_SIZE = 2048
 
 # get_ipython().run_line_magic('mkdir', 'model')
 # get_ipython().run_line_magic('mkdir', 'interim')

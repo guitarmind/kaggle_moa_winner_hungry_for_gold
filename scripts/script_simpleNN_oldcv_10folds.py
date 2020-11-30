@@ -40,7 +40,7 @@ warnings.filterwarnings('ignore')
 from sklearn.preprocessing import QuantileTransformer
 
 
-BATCH_SIZE = 512
+BATCH_SIZE = 2048
 
 
 # In[4]:

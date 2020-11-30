@@ -48,7 +48,7 @@ from sklearn.preprocessing import QuantileTransformer
 dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
 model_output_folder = "../input/simple-nn-using-old-cv" if kernel_mode \
     else f"{dataset_folder}/simple-nn-using-old-cv-markpeng"
-BATCH_SIZE = 512
+BATCH_SIZE = 2048
 # BATCH_SIZE = 128
 
 if kernel_mode:
