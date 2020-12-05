@@ -31,7 +31,7 @@ import sys
 import os
 import random
 import json
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+sys.path.append('../input/iterative-stratification/')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 import pickle
 from pickle import dump, load
