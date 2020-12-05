@@ -31,7 +31,7 @@ import sys
 import os
 import random
 import json
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+sys.path.append('../input/iterative-stratification/')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 import pickle
 from pickle import dump, load
@@ -349,8 +349,8 @@ sub
 sub.iloc[test_features['cp_type'] == 'ctl_vehicle', 1:] = 0
 
 # Save Submission
-# sub.to_csv('submission_2heads-looper-super-puper.csv', index=False)
-sub.to_csv('submission.csv', index=False)
+sub.to_csv('submission_2heads-looper-super-puper_0.01836.csv', index=False)
+# sub.to_csv('submission.csv', index=False)
 
 
 # In[18]:

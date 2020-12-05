@@ -7,7 +7,7 @@ kernel_mode = True
 
 import sys
 if kernel_mode:
-    sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+    sys.path.append('../input/iterative-stratification/')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
 
@@ -49,7 +49,6 @@ dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
 model_output_folder = "../input/simple-nn-using-old-cv" if kernel_mode \
     else f"{dataset_folder}/simple-nn-using-old-cv-markpeng"
 BATCH_SIZE = 2048
-# BATCH_SIZE = 128
 
 if kernel_mode:
     os.listdir(dataset_folder)
@@ -86,7 +85,6 @@ IS_TRAIN = False
 
 for col in (GENES + CELLS):
 
-  #  transformer = QuantileTransformer(n_quantiles=100,random_state=0, output_distribution="normal")
     vec_len = len(train_features[col].values)
     vec_len_test = len(test_features[col].values)
     raw_vec = train_features[col].values.reshape(vec_len, 1)
@@ -125,16 +123,12 @@ n_comp = 90  # <--Update
 
 data = pd.concat([pd.DataFrame(train_features[GENES]),
                   pd.DataFrame(test_features[GENES])])
-#data2 = (FactorAnalysis(n_components=n_comp, random_state=42).fit_transform(data[GENES]))
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp,
                         random_state=1903).fit(data[GENES])
     pd.to_pickle(fa, f'factor_analysis_g.pkl')
-    #umap = UMAP(n_components=n_dim, random_state=1903).fit(data[GENES])
-    # pd.to_pickle(umap, f'{MODEL_DIR}/{NB}_umap_g.pkl')
 else:
     fa = pd.read_pickle(f'{model_output_folder}/factor_analysis_g.pkl')
-    # umap = pd.read_pickle(f'{MODEL_DIR}/{NB}_umap_g.pkl')
 data2 = fa.transform(data[GENES])
 train2 = data2[:train_features.shape[0]]
 test2 = data2[-test_features.shape[0]:]
@@ -142,7 +136,6 @@ test2 = data2[-test_features.shape[0]:]
 train2 = pd.DataFrame(train2, columns=[f'pca_G-{i}' for i in range(n_comp)])
 test2 = pd.DataFrame(test2, columns=[f'pca_G-{i}' for i in range(n_comp)])
 
-# drop_cols = [f'c-{i}' for i in range(n_comp,len(GENES))]
 train_features = pd.concat((train_features, train2), axis=1)
 test_features = pd.concat((test_features, test2), axis=1)
 
@@ -159,20 +152,15 @@ if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp,
                         random_state=1903).fit(data[CELLS])
     pd.to_pickle(fa, f'factor_analysis_c.pkl')
-    #umap = UMAP(n_components=n_dim, random_state=1903).fit(data[GENES])
-    # pd.to_pickle(umap, f'{MODEL_DIR}/{NB}_umap_g.pkl')
 else:
     fa = pd.read_pickle(f'{model_output_folder}/factor_analysis_c.pkl')
-    # umap = pd.read_pickle(f'{MODEL_DIR}/{NB}_umap_g.pkl')
 data2 = fa.transform(data[CELLS])
-#data2 = (FactorAnalysis(n_components=n_comp, random_state=42).fit_transform(data[CELLS]))
 train2 = data2[:train_features.shape[0]]
 test2 = data2[-test_features.shape[0]:]
 
 train2 = pd.DataFrame(train2, columns=[f'pca_C-{i}' for i in range(n_comp)])
 test2 = pd.DataFrame(test2, columns=[f'pca_C-{i}' for i in range(n_comp)])
 
-# drop_cols = [f'c-{i}' for i in range(n_comp,len(CELLS))]
 train_features = pd.concat((train_features, train2), axis=1)
 test_features = pd.concat((test_features, test2), axis=1)
 
@@ -189,7 +177,6 @@ train_features.shape
 from sklearn.feature_selection import VarianceThreshold
 
 
-# var_thresh = VarianceThreshold(0.8)  #<-- Update
 var_thresh = QuantileTransformer(
     n_quantiles=100, random_state=0, output_distribution="normal")
 
@@ -243,7 +230,6 @@ from sklearn.cluster import KMeans
 def fe_cluster_genes(train, test, n_clusters_g=45, SEED=123):
 
     features_g = list(train.columns[4:776])
-    #features_c = CELLS
 
     def create_cluster(train, test, features, kind='g', n_clusters=n_clusters_g):
         train_ = train[features].copy()
@@ -258,7 +244,6 @@ def fe_cluster_genes(train, test, n_clusters_g=45, SEED=123):
 
     train, test = create_cluster(
         train, test, features_g, kind='g', n_clusters=n_clusters_g)
-   # train, test = create_cluster(train, test, features_c, kind = 'c', n_clusters = n_clusters_c)
     return train, test
 
 train_features, test_features = fe_cluster_genes(train_features, test_features)
@@ -269,7 +254,6 @@ train_features, test_features = fe_cluster_genes(train_features, test_features)
 
 def fe_cluster_cells(train, test, n_clusters_c=15, SEED=123):
 
-    #features_g = GENES
     features_c = list(train.columns[776:876])
 
     def create_cluster(train, test, features, kind='c', n_clusters=n_clusters_c):
@@ -283,7 +267,6 @@ def fe_cluster_cells(train, test, n_clusters_c=15, SEED=123):
         test = pd.get_dummies(test, columns=[f'clusters_{kind}'])
         return train, test
 
-   # train, test = create_cluster(train, test, features_g, kind = 'g', n_clusters = n_clusters_g)
     train, test = create_cluster(
         train, test, features_c, kind='c', n_clusters=n_clusters_c)
     return train, test
