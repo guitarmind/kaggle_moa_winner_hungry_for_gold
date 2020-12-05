@@ -1,25 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# - a notebook for inference with pre-trained models 
-# - all necessary models are stored in MODEL_DIR = "../input/kibuna-nn-hs-1024-last/model"
-#     - add the dataset created by kibuna NN hs:1024 last [TRAIN]
 
 # In[1]:
 
 
 import sys
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+sys.path.append('../input/iterative-stratification')
 sys.path.append('../input/umaplearn/umap')
-
-import os
-os.makedirs('model', exist_ok=True)
-os.makedirs('interim', exist_ok=True)
 
 BATCH_SIZE = 2048
 
-# get_ipython().run_line_magic('mkdir', 'model')
-# get_ipython().run_line_magic('mkdir', 'interim')
+# %mkdir model
+# %mkdir interim
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
@@ -45,7 +38,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 print(torch.cuda.is_available())
 import warnings
-# warnings.filterwarnings('ignore')
 
 
 # In[2]:
@@ -60,8 +52,7 @@ torch.__version__
 NB = '25'
 
 IS_TRAIN = False
-MODEL_DIR = "../input/kibuna-nn-hs-1024-last-train/model" # "../model"
-INT_DIR = "interim" # "../interim"
+MODEL_DIR = "../input/kibuna-nn-hs-1024-last-no-int-train/model" # "../model"
 
 NSEEDS = 5  # 5
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -71,7 +62,7 @@ WEIGHT_DECAY = 1e-5
 EARLY_STOPPING_STEPS = 10
 EARLY_STOP = False
 
-NFOLDS = 5  # 5
+NFOLDS = 10
 
 PMIN = 0.0005
 PMAX = 0.9995
@@ -93,8 +84,6 @@ sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
 # In[5]:
 
 
-# test_features_dummy = pd.read_csv("../input/dummytestfeatures/test_features_dummy.csv")
-# test_features = pd.concat([test_features, test_features_dummy]).reset_index(drop=True)
 
 
 # In[6]:
@@ -107,9 +96,6 @@ print(train_targets_nonscored.shape)
 # In[7]:
 
 
-# for c in train_targets_scored.columns:
-#     if c != "sig_id":
-#         train_targets_scored[c] = np.maximum(PMIN, np.minimum(PMAX, train_targets_scored[c]))
 for c in train_targets_nonscored.columns:
     if c != "sig_id":
         train_targets_nonscored[c] = np.maximum(PMIN, np.minimum(PMAX, train_targets_nonscored[c]))
@@ -218,16 +204,15 @@ test3 = pd.DataFrame(test3, columns=[f'umap_C-{i}' for i in range(n_dim)])
 train_features = pd.concat((train_features, train2, train3), axis=1)
 test_features = pd.concat((test_features, test2, test3), axis=1)
 
-# drop_cols = [f'c-{i}' for i in range(n_comp,len(CELLS))]
+
+
+# In[ ]:
+
+
+
 
 
 # In[12]:
-
-
-data3
-
-
-# In[13]:
 
 
 from sklearn.preprocessing import QuantileTransformer
@@ -247,62 +232,8 @@ for col in (GENES + CELLS):
     test_features[col] = transformer.transform(test_features[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
 
 
-# In[14]:
-
-
-# PCAS = [col for col in train_features.columns if col.startswith('pca_')]
-# UMAPS = [col for col in train_features.columns if col.startswith('umap_')]
-
 
 # In[15]:
-
-
-# from sklearn.preprocessing import PolynomialFeatures
-# n_deg = 2
-
-# data = pd.concat([pd.DataFrame(train_features[PCAS]), pd.DataFrame(test_features[PCAS])])
-# data2 = (PolynomialFeatures(degree=n_deg, include_bias=False).fit_transform(data[PCAS]))
-
-# # print(data2)
-# # data4 = (UMAP(n_components=n_dim, n_neighbors=5, random_state=1903).fit_transform(data[GENES]))
-# # data5 = (UMAP(n_components=n_dim, min_dist=0.01, random_state=1903).fit_transform(data[GENES]))
-
-# train2 = data2[:train_features.shape[0]]
-# test2 = data2[-test_features.shape[0]:]
-
-# # print(train2.shape)
-# train2 = pd.DataFrame(train2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
-# test2 = pd.DataFrame(test2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
-
-# # drop_cols = [f'c-{i}' for i in range(n_comp,len(GENES))]
-# # train_features = pd.concat((train_features, train2, train3, train4, train5), axis=1)
-# # test_features = pd.concat((test_features, test2, test3, test4, test5), axis=1)
-# train_features = pd.concat((train_features, train2), axis=1)
-# test_features = pd.concat((test_features, test2), axis=1)
-
-
-# data = pd.concat([pd.DataFrame(train_features[UMAPS]), pd.DataFrame(test_features[UMAPS])])
-# data2 = (PolynomialFeatures(degree=n_deg, include_bias=False).fit_transform(data[UMAPS]))
-
-# # print(data2)
-# # data4 = (UMAP(n_components=n_dim, n_neighbors=5, random_state=1903).fit_transform(data[GENES]))
-# # data5 = (UMAP(n_components=n_dim, min_dist=0.01, random_state=1903).fit_transform(data[GENES]))
-
-# train2 = data2[:train_features.shape[0]]
-# test2 = data2[-test_features.shape[0]:]
-
-# # print(train2.shape)
-# train2 = pd.DataFrame(train2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
-# test2 = pd.DataFrame(test2, columns=[f'poly_C-{i}' for i in range(train2.shape[1])])
-
-# # drop_cols = [f'c-{i}' for i in range(n_comp,len(GENES))]
-# # train_features = pd.concat((train_features, train2, train3, train4, train5), axis=1)
-# # test_features = pd.concat((test_features, test2, test3, test4, test5), axis=1)
-# train_features = pd.concat((train_features, train2), axis=1)
-# test_features = pd.concat((test_features, test2), axis=1)
-
-
-# In[16]:
 
 
 print(train_features.shape)
@@ -315,26 +246,24 @@ print(test_features.shape)
 
 
 
-# In[17]:
+# In[16]:
 
 
-# train = train_features.merge(train_targets_scored, on='sig_id')
 train = train_features.merge(train_targets_nonscored, on='sig_id')
 train = train[train['cp_type']!='ctl_vehicle'].reset_index(drop=True)
 test = test_features[test_features['cp_type']!='ctl_vehicle'].reset_index(drop=True)
 
-# target = train[train_targets_scored.columns]
 target = train[train_targets_nonscored.columns]
 
 
-# In[18]:
+# In[17]:
 
 
 train = train.drop('cp_type', axis=1)
 test = test.drop('cp_type', axis=1)
 
 
-# In[19]:
+# In[18]:
 
 
 print(target.shape)
@@ -344,13 +273,13 @@ print(train.shape)
 print(test.shape)
 
 
-# In[20]:
+# In[19]:
 
 
 target_cols = target.drop('sig_id', axis=1).columns.values.tolist()
 
 
-# In[21]:
+# In[20]:
 
 
 folds = train.copy()
@@ -364,7 +293,7 @@ folds['kfold'] = folds['kfold'].astype(int)
 folds
 
 
-# In[22]:
+# In[21]:
 
 
 print(train.shape)
@@ -374,7 +303,7 @@ print(target.shape)
 print(sample_submission.shape)
 
 
-# In[23]:
+# In[22]:
 
 
 class MoADataset:
@@ -406,7 +335,7 @@ class TestDataset:
         return dct
 
 
-# In[24]:
+# In[23]:
 
 
 def train_fn(model, optimizer, scheduler, loss_fn, dataloader, device):
@@ -416,7 +345,6 @@ def train_fn(model, optimizer, scheduler, loss_fn, dataloader, device):
     for data in dataloader:
         optimizer.zero_grad()
         inputs, targets = data['x'].to(device), data['y'].to(device)
-#         print(inputs.shape)
         outputs = model(inputs)
         loss = loss_fn(outputs, targets)
         loss.backward()
@@ -465,7 +393,7 @@ def inference_fn(model, dataloader, device):
     return preds
 
 
-# In[25]:
+# In[24]:
 
 
 class Model(nn.Module):
@@ -499,37 +427,17 @@ class Model(nn.Module):
         return x
 
 
-# In[26]:
+# In[25]:
 
 
 def process_data(data):
     
     data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
-#     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2})
-#     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1})
 
-# --------------------- Normalize ---------------------
-#     for col in GENES:
-#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-    
-#     for col in CELLS:
-#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-    
-#--------------------- Removing Skewness ---------------------
-#     for col in GENES + CELLS:
-#         if(abs(data[col].skew()) > 0.75):
-            
-#             if(data[col].skew() < 0): # neg-skewness
-#                 data[col] = data[col].max() - data[col] + 1
-#                 data[col] = np.sqrt(data[col])
-            
-#             else:
-#                 data[col] = np.sqrt(data[col])
-    
     return data
 
 
-# In[27]:
+# In[26]:
 
 
 feature_cols = [c for c in process_data(folds).columns if c not in target_cols]
@@ -537,17 +445,15 @@ feature_cols = [c for c in feature_cols if c not in ['kfold','sig_id']]
 len(feature_cols)
 
 
-# In[28]:
+# In[27]:
 
 
 num_features=len(feature_cols)
 num_targets=len(target_cols)
 hidden_size=2048
-# hidden_size=4096
-# hidden_size=9192
 
 
-# In[29]:
+# In[28]:
 
 
 def run_training(fold, seed):
@@ -580,8 +486,6 @@ def run_training(fold, seed):
     model.to(DEVICE)
     
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000, 
-#                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3, 
                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     loss_fn = nn.BCEWithLogitsLoss()
@@ -637,7 +541,7 @@ def run_training(fold, seed):
     return oof, predictions
 
 
-# In[30]:
+# In[29]:
 
 
 def run_k_fold(NFOLDS, seed):
@@ -653,10 +557,10 @@ def run_k_fold(NFOLDS, seed):
     return oof, predictions
 
 
-# In[31]:
+# In[30]:
 
 
-SEED = range(NSEEDS)  #[0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
+SEED = range(NSEEDS)  
 oof = np.zeros((len(train), len(target_cols)))
 predictions = np.zeros((len(test), len(target_cols)))
 
@@ -676,23 +580,20 @@ print(oof.shape)
 print(predictions.shape)
 
 
+# In[31]:
+
+
+
+
 # In[32]:
-
-
-train.to_pickle(f"{INT_DIR}/{NB}-train_nonscore_pred.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}-test_nonscore_pred.pkl")
-
-
-# In[33]:
 
 
 len(target_cols)
 
 
-# In[34]:
+# In[33]:
 
 
-train[target_cols] = np.maximum(PMIN, np.minimum(PMAX, train[target_cols]))
 valid_results = train_targets_nonscored.drop(columns=target_cols).merge(train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 
 y_true = train_targets_nonscored[target_cols].values
@@ -707,14 +608,7 @@ for i in range(len(target_cols)):
 print("CV log_loss: ", score)
 
 
-# CV log_loss:  0.014761779358699672
-# CV log_loss:  0.014519859174255039
-# CV log_loss:  0.014525173864593479
-# CV log_loss:  0.014354930596928602 # 3 umap features
-# CV log_loss:  0.014353604854355429 # more umap features
-# CV log_loss:  0.01436484670778641 # more hidden nodes
-
-# In[35]:
+# In[34]:
 
 
 
@@ -722,52 +616,33 @@ EPOCHS = 25
 # NFOLDS = 5
 
 
+# In[35]:
+
+
 # In[36]:
-
-
-# sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-# sub.to_csv('submission.csv', index=False)
-
-
-# In[37]:
 
 
 nonscored_target = [c for c in train[train_targets_nonscored.columns] if c != "sig_id"]
 
 
-# In[38]:
+# In[37]:
 
 
 nonscored_target
 
 
-# In[39]:
+# In[38]:
 
 
-train = pd.read_pickle(f"{INT_DIR}/{NB}-train_nonscore_pred.pkl")
-test = pd.read_pickle(f"{INT_DIR}/{NB}-test_nonscore_pred.pkl")
+
+train = train.merge(train_targets_scored, on='sig_id')
+
+target = train[train_targets_scored.columns]
 
 
 # In[40]:
 
 
-# use nonscored target in the given file as feature
-# if comment out below, use predicted nonscored target
-# train = train.drop(nonscored_target, axis=1)
-# train = train.merge(train_targets_nonscored, on="sig_id")
-# train = train_features.merge(train_targets_scored, on='sig_id')
-train = train.merge(train_targets_scored, on='sig_id')
-# train = train[train['cp_type']!='ctl_vehicle'].reset_index(drop=True)
-# test = test[test['cp_type']!='ctl_vehicle'].reset_index(drop=True)
-
-# target = train[train_targets_scored.columns]
-target = train[train_targets_scored.columns]
-
-
-# In[41]:
-
-
-# from sklearn.preprocessing import QuantileTransformer
 
 for col in (nonscored_target):
 
@@ -785,19 +660,19 @@ for col in (nonscored_target):
     test[col] = transformer.transform(test[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
 
 
-# In[42]:
+# In[41]:
 
 
 target_cols = target.drop('sig_id', axis=1).columns.values.tolist()
 
 
-# In[43]:
+# In[42]:
 
 
 train
 
 
-# In[44]:
+# In[43]:
 
 
 folds = train.copy()
@@ -811,7 +686,7 @@ folds['kfold'] = folds['kfold'].astype(int)
 folds
 
 
-# In[45]:
+# In[44]:
 
 
 print(train.shape)
@@ -821,37 +696,17 @@ print(target.shape)
 print(sample_submission.shape)
 
 
-# In[46]:
+# In[45]:
 
 
 def process_data(data):
     
     data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
-#     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2})
-#     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1})
 
-# --------------------- Normalize ---------------------
-#     for col in GENES:
-#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-    
-#     for col in CELLS:
-#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-    
-#--------------------- Removing Skewness ---------------------
-#     for col in GENES + CELLS:
-#         if(abs(data[col].skew()) > 0.75):
-            
-#             if(data[col].skew() < 0): # neg-skewness
-#                 data[col] = data[col].max() - data[col] + 1
-#                 data[col] = np.sqrt(data[col])
-            
-#             else:
-#                 data[col] = np.sqrt(data[col])
-    
     return data
 
 
-# In[47]:
+# In[46]:
 
 
 feature_cols = [c for c in process_data(folds).columns if c not in target_cols]
@@ -859,17 +714,16 @@ feature_cols = [c for c in feature_cols if c not in ['kfold','sig_id']]
 len(feature_cols)
 
 
-# In[48]:
+# In[47]:
 
 
 num_features=len(feature_cols)
 num_targets=len(target_cols)
 hidden_size=2048
-# hidden_size=4096
-# hidden_size=9192
 
 
-# In[49]:
+
+# In[48]:
 
 
 def run_training(fold, seed):
@@ -902,8 +756,6 @@ def run_training(fold, seed):
     model.to(DEVICE)
     
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000, 
-#                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3, 
                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     loss_fn = nn.BCEWithLogitsLoss()
@@ -959,7 +811,7 @@ def run_training(fold, seed):
     return oof, predictions
 
 
-# In[50]:
+# In[49]:
 
 
 def run_k_fold(NFOLDS, seed):
@@ -975,10 +827,10 @@ def run_k_fold(NFOLDS, seed):
     return oof, predictions
 
 
-# In[51]:
+# In[50]:
 
 
-SEED = range(NSEEDS)  #[0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
+SEED = range(NSEEDS)  
 oof = np.zeros((len(train), len(target_cols)))
 predictions = np.zeros((len(test), len(target_cols)))
 
@@ -995,23 +847,20 @@ train[target_cols] = oof
 test[target_cols] = predictions
 
 
+# In[51]:
+
+
+
+
 # In[52]:
-
-
-train.to_pickle(f"{INT_DIR}/{NB}-train-score-pred.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}-test-score-pred.pkl")
-
-
-# In[53]:
 
 
 len(target_cols)
 
 
-# In[54]:
+# In[53]:
 
 
-train[target_cols] = np.maximum(PMIN, np.minimum(PMAX, train[target_cols]))
 
 valid_results = train_targets_scored.drop(columns=target_cols).merge(train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 
@@ -1027,52 +876,18 @@ for i in range(len(target_cols)):
 print("CV log_loss: ", score)
 
 
-# - CV log_loss:  0.014761779358699672
-# - CV log_loss:  0.014519859174255039
-# - CV log_loss:  0.014525173864593479
-# - CV log_loss:  0.014354930596928602 # 3 umap features
-# - CV log_loss:  0.014353604854355429 # more umap features
-# - CV log_loss:  0.01436484670778641 # more hidden nodes
-# - CV log_loss:  0.014344688083211073
-#   - using predicted unscored targets as feature 
-# - CV log_loss:  0.013368097791623873
-#   - using given unscored targets as feature
-#   - bad in public lb
-# - CV log_loss:  0.01434373547175235
-#   - rankgauss predicted unscored targets
-# - CV log_loss:  0.014346100008158216
-#   - unscored targets pca/umap
-# - CV log_loss:  0.014328486629791769
-#   - NFOLDS=10, Epoch=20
-# - CV log_loss:  0.014299741080816082
-#   - NFOLDS=10, Epoch=20, 25
-# - CV log_loss:  0.014311301224480969
-#   - NFOLDS=10, Epoch=25
-# - CV log_loss:  0.01429269446076626
-#   - NFOLDS=10, Epoch=15, 25
+# In[54]:
 
-# In[55]:
-
-
-# train = pd.read_pickle(f"../interim/23-train-score-pred.pkl")
-# test = pd.read_pickle(f"../interim/23-test-score-pred.pkl")
 
 
 # In[56]:
-
-
-train = pd.read_pickle(f"{INT_DIR}/{NB}-train-score-pred.pkl")
-test = pd.read_pickle(f"{INT_DIR}/{NB}-test-score-pred.pkl")
-
-
-# In[57]:
 
 
 EPOCHS = 25
 # NFOLDS = 5
 
 
-# In[58]:
+# In[57]:
 
 
 PMIN = 0.0005
@@ -1082,58 +897,43 @@ for c in train_targets_scored.columns:
         train_targets_scored[c] = np.maximum(PMIN, np.minimum(PMAX, train_targets_scored[c]))
 
 
-# In[59]:
+# In[58]:
 
 
 train_targets_scored.columns
 
 
-# In[60]:
+# In[59]:
 
 
 train = train[train_targets_scored.columns]
 train.columns = [c + "_pred" if (c != 'sig_id' and c in train_targets_scored.columns) else c for c in train.columns]
 
 
-# In[61]:
+# In[60]:
 
 
 test = test[train_targets_scored.columns]
 test.columns = [c + "_pred" if (c != 'sig_id' and c in train_targets_scored.columns) else c for c in test.columns]
 
 
-# In[62]:
+# In[61]:
 
 
 train
 
 
-# In[63]:
+# In[62]:
 
 
-# use nonscored target in the given file as feature
-# if comment out below, use predicted nonscored target
-# train = train.drop(nonscored_target, axis=1)
-# train = train.merge(train_targets_nonscored, on="sig_id")
-# train = train_features.merge(train_targets_scored, on='sig_id')
 train = train.merge(train_targets_scored, on='sig_id')
-# train = train[train['cp_type']!='ctl_vehicle'].reset_index(drop=True)
-# test = test[test['cp_type']!='ctl_vehicle'].reset_index(drop=True)
 
-# target = train[train_targets_scored.columns]
 target = train[train_targets_scored.columns]
 
 
+# In[63]:
+
 # In[64]:
-
-
-# train["cp_time"] = train_features[train_features["cp_type"]=="trt_cp"].reset_index(drop=True)["cp_time"]
-# train["cp_dose"] = train_features[train_features["cp_type"]=="trt_cp"].reset_index(drop=True)["cp_dose"]
-# test["cp_time"] = test_features[test_features["cp_type"]=="trt_cp"].reset_index(drop=True)["cp_time"]
-# test["cp_dose"] = test_features[test_features["cp_type"]=="trt_cp"].reset_index(drop=True)["cp_dose"]
-
-
-# In[65]:
 
 
 from sklearn.preprocessing import QuantileTransformer
@@ -1142,11 +942,9 @@ scored_target_pred = [c + "_pred" for c in train_targets_scored.columns if c != 
 
 for col in (scored_target_pred):
 
-#     transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
     vec_len = len(train[col].values)
     vec_len_test = len(test[col].values)
     raw_vec = train[col].values.reshape(vec_len, 1)
-#     transformer.fit(raw_vec)
     if IS_TRAIN:
         transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
         transformer.fit(raw_vec)
@@ -1158,26 +956,24 @@ for col in (scored_target_pred):
     test[col] = transformer.transform(test[col].values.reshape(vec_len_test, 1)).reshape(1, vec_len_test)[0]
 
 
+# In[65]:
+
+
+
+
 # In[66]:
-
-
-# train = train.drop('cp_type', axis=1)
-# test = test.drop('cp_type', axis=1)
-
-
-# In[67]:
 
 
 target_cols = target.drop('sig_id', axis=1).columns.values.tolist()
 
 
-# In[68]:
+# In[67]:
 
 
 train
 
 
-# In[69]:
+# In[68]:
 
 
 folds = train.copy()
@@ -1191,7 +987,7 @@ folds['kfold'] = folds['kfold'].astype(int)
 folds
 
 
-# In[70]:
+# In[69]:
 
 
 print(train.shape)
@@ -1201,43 +997,22 @@ print(target.shape)
 print(sample_submission.shape)
 
 
-# In[71]:
+# In[70]:
 
 
 folds
 
 
-# In[72]:
+# In[71]:
 
 
 def process_data(data):
     
-#     data = pd.get_dummies(data, columns=['cp_time','cp_dose'])
-#     data.loc[:, 'cp_time'] = data.loc[:, 'cp_time'].map({24: 0, 48: 1, 72: 2, 0:0, 1:1, 2:2})
-#     data.loc[:, 'cp_dose'] = data.loc[:, 'cp_dose'].map({'D1': 0, 'D2': 1, 0:0, 1:1})
 
-# --------------------- Normalize ---------------------
-#     for col in GENES:
-#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-    
-#     for col in CELLS:
-#         data[col] = (data[col]-np.mean(data[col])) / (np.std(data[col]))
-    
-#--------------------- Removing Skewness ---------------------
-#     for col in GENES + CELLS:
-#         if(abs(data[col].skew()) > 0.75):
-            
-#             if(data[col].skew() < 0): # neg-skewness
-#                 data[col] = data[col].max() - data[col] + 1
-#                 data[col] = np.sqrt(data[col])
-            
-#             else:
-#                 data[col] = np.sqrt(data[col])
-    
     return data
 
 
-# In[73]:
+# In[72]:
 
 
 feature_cols = [c for c in folds.columns if c not in target_cols]
@@ -1245,30 +1020,28 @@ feature_cols = [c for c in feature_cols if c not in ['kfold','sig_id']]
 len(feature_cols)
 
 
-# In[74]:
+# In[73]:
 
 
 feature_cols
 
 
-# In[75]:
+# In[74]:
 
 
 folds
 
 
-# In[76]:
+# In[75]:
 
 
 EPOCHS = 25
 num_features=len(feature_cols)
 num_targets=len(target_cols)
 hidden_size=1024
-# hidden_size=4096
-# hidden_size=9192
 
 
-# In[77]:
+# In[76]:
 
 
 def run_training(fold, seed):
@@ -1301,8 +1074,6 @@ def run_training(fold, seed):
     model.to(DEVICE)
     
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-#     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.3, div_factor=1000, 
-#                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, pct_start=0.2, div_factor=1e3, 
                                               max_lr=1e-2, epochs=EPOCHS, steps_per_epoch=len(trainloader))
     loss_fn = nn.BCEWithLogitsLoss()
@@ -1357,7 +1128,7 @@ def run_training(fold, seed):
     return oof, predictions
 
 
-# In[78]:
+# In[77]:
 
 
 def run_k_fold(NFOLDS, seed):
@@ -1373,10 +1144,10 @@ def run_k_fold(NFOLDS, seed):
     return oof, predictions
 
 
-# In[79]:
+# In[78]:
 
 
-SEED = range(NSEEDS)  # [0, 1, 2, 3 ,4]#, 5, 6, 7, 8, 9, 10]
+SEED = range(NSEEDS)  
 oof = np.zeros((len(train), len(target_cols)))
 predictions = np.zeros((len(test), len(target_cols)))
 
@@ -1393,17 +1164,13 @@ train[target_cols] = oof
 test[target_cols] = predictions
 
 
+# In[79]:
+
+
+
 # In[80]:
 
 
-train.to_pickle(f"{INT_DIR}/{NB}-train-score-stack-pred.pkl")
-test.to_pickle(f"{INT_DIR}/{NB}-test-score-stack-pred.pkl")
-
-
-# In[81]:
-
-
-train[target_cols] = np.maximum(PMIN, np.minimum(PMAX, train[target_cols]))
 valid_results = train_targets_scored.drop(columns=target_cols).merge(train[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 
 y_true = train_targets_scored[target_cols].values
@@ -1420,27 +1187,17 @@ for i in range(len(target_cols)):
 print("CV log_loss: ", score)
 
 
+# In[81]:
+
+
+sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
+sub.to_csv('submission_2stageNN_with_ns_oldcv_10folds_0.01822.csv', index=False)
+
+
 # In[82]:
 
 
-# for c in test.columns:
-#     if c != "sig_id":
-#         test[c] = np.maximum(PMIN, np.minimum(PMAX, test[c]))
-
-sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission_2stageNN_with_ns_oldcv_0.01822.csv', index=False)
-
-
-# In[83]:
-
-
 sub
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:

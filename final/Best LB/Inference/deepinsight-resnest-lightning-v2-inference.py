@@ -1,44 +1,26 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[4]:
 
 
 """
-Transform non-image features to an image matrix using t-SNE non-linear dimensionality reduction.
-
-[V2]
-* Reduce memory usage by transforming rows to images in real-time
-
-[V3]
-* Tuning architecture and performance
- - 1 FC ELU Layer without dropout, T_max=5 --> fold0 val_loss_epoch=0.014794
- 
-[V4]
-* 1 FC ELU Layer with dropout=0.5, T_max=5     --> worse,  fold0 val_loss_epoch=0.014915
-* CosineAnnealingWarmRestarts (T_0=5 epochs)   --> worse,  fold0 val_loss_epoch=0.014866
-* nn.SELU() (scaled exponential linear units)  --> better, fold0 val_loss_epoch=0.014761
-* Normalized RGB for pretrained models         --> worse,  fold0 val_loss_epoch=0.014933
-* nn.GELU() (Gaussian Error Linear Units)      --> worse,  fold0 val_loss_epoch=0.014877
-* SwapNoise (randomly swap features with p=0.15, portion=0.1)
-
-[V5]
-* SwapNoise (randomly swap features with p=0.3, portion=0.1)
-* 400 resolution/image size --> better, fold0 val_loss_epoch=0.014776
-
-[V6]
-* KernelPCA + PCA as 2nd and 3rd channels
-
-[V7]
+[V1]
+* resnest50_fast_2s2x40d
 * Add Max./Min. Channels
 
+[V2]
+* resnest50_fast_2s2x40d
+* final_drop = 0.2
+* dropblock_prob = 0.0
+
 [TODO]
-* PCGrad (Project Conflicting Gradients)
 * Separate gene expression, cell vaibility and other features
+* PCGrad (Project Conflicting Gradients)
 * Tuning resolution and image size
 
-EfficientNet Setup Parameters:
-https://github.com/rwightman/gen-efficientnet-pytorch/blob/master/geffnet/gen_efficientnet.py#L502
+ResNeSt:
+https://github.com/zhanghang1989/ResNeSt
 """
 
 kernel_mode = True
@@ -46,9 +28,9 @@ training_mode = False
 
 import sys
 if kernel_mode:
-    sys.path.insert(0, "../input/iterative-stratification/iterative-stratification-master")
+    sys.path.insert(0, "../input/iterative-stratification/")
     sys.path.insert(0, "../input/pytorch-lightning")
-    sys.path.insert(0, "../input/gen-efficientnet-pytorch")
+    sys.path.insert(0, "../input/resnest")
     sys.path.insert(0, "../input/pytorch-optimizer")
     sys.path.insert(0, "../input/pytorch-ranger")
 
@@ -71,7 +53,7 @@ from matplotlib import rcParams
 import seaborn as sns
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import QuantileTransformer, LabelEncoder, MinMaxScaler, RobustScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder, MinMaxScaler,     RobustScaler, QuantileTransformer, PowerTransformer
 from sklearn.decomposition import PCA, KernelPCA
 from sklearn.manifold import TSNE
 
@@ -94,7 +76,8 @@ from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, Mode
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.metrics.functional import classification
 
-import geffnet
+import resnest
+from resnest.torch import resnest50, resnest101, resnest200, resnest269,     resnest50_fast_2s2x40d, resnest50_fast_1s2x40d, resnest50_fast_1s1x64d
 
 import cv2
 import imgaug as ia
@@ -120,23 +103,23 @@ print(f"PyTorch Lightning Version: {pl.__version__}")
 
 # if kernel_mode:
 #     !mkdir -p /root/.cache/torch/hub/checkpoints/
-#     !cp ../input/gen-efficientnet-pretrained/tf_efficientnet_*.pth /root/.cache/torch/hub/checkpoints/
+#     !cp ../input/deepinsight-resnest-v2-resnest50-output/*.pth /root/.cache/torch/hub/checkpoints/
 #     !ls -la /root/.cache/torch/hub/checkpoints/
 
 
-# In[2]:
+# In[5]:
 
 
-model_type = "b3"
-pretrained_model = f"tf_efficientnet_{model_type}_ns"
-experiment_name = f"deepinsight_efficientnet_v7_{model_type}"
+model_type = "resnest50"
+pretrained_model = f"resnest50_fast_2s2x40d"
+experiment_name = f"deepinsight_ResNeSt_v2_{model_type}"
 
 if kernel_mode:
     dataset_folder = "../input/lish-moa"
-    model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-efficientnet-v7-b3/{experiment_name}"
+    model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-resnest-v2-resnest50-output/{experiment_name}"
 else:
     dataset_folder = "/workspace/Kaggle/MoA"
-    model_output_folder = f"{dataset_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_efficientnet_v7_b3/{experiment_name}"
+    model_output_folder = f"{dataset_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_ResNeSt_v2_resnest50/{experiment_name}"
 
 if training_mode:
     os.makedirs(model_output_folder, exist_ok=True)
@@ -155,9 +138,8 @@ gpus = [0]
 # gpus = [1]
 
 epochs = 200
-patience = 12
+patience = 16
 
-# learning_rate = 7e-4
 # learning_rate = 1e-3
 learning_rate = 0.000352  # Suggested Learning Rate from LR finder (V7)
 learning_rate *= len(gpus)
@@ -171,31 +153,26 @@ T_0 = 5  # epochs
 accumulate_grad_batches = 1
 gradient_clip_val = 10.0
 
-if model_type == "b0":
+if "resnest50" in model_type:
     batch_size = 128
-    infer_batch_size = 256
-    image_size = 224  # B0
-    drop_rate = 0.2  # B0
+    infer_batch_size = 256 if not kernel_mode else 256
+    image_size = 224
     resolution = 224
-elif model_type == "b3":
+elif model_type == "resnest101":
     batch_size = 48
-    infer_batch_size = 96 if not kernel_mode else 256
-    image_size = 300  # B3
-    drop_rate = 0.3  # B3
-    resolution = 300
-elif model_type == "b5":
+    infer_batch_size = 96
+    image_size = 256
+    resolution = 256
+elif model_type == "resnest200":
     batch_size = 12
     infer_batch_size = 24
-    image_size = 456  # B5
-    drop_rate = 0.4  # B5
-    resolution = 456
-elif model_type == "b7":
-    batch_size = 2
-    infer_batch_size = 4
-    # image_size = 800  # B7
-    image_size = 875  # B7
-    drop_rate = 0.5  # B7
-    resolution = 875
+    image_size = 320
+    resolution = 320
+elif model_type == "resnest269":
+    batch_size = 4
+    infer_batch_size = 8
+    image_size = 416
+    resolution = 416
 
 # Prediction Clipping Thresholds
 prob_min = 0.001
@@ -210,11 +187,13 @@ label_smoothing = 0.001
 # DeepInsight Transform
 perplexity = 5
 
-drop_connect_rate = 0.2
 fc_size = 512
 
+final_drop = 0.2
+dropblock_prob = 0.0
 
-# In[3]:
+
+# In[6]:
 
 
 train_features = pd.read_csv(
@@ -750,80 +729,6 @@ class LogScaler:
 # In[15]:
 
 
-class MoAImageMultiTransformDataset(torch.utils.data.Dataset):
-    def __init__(self, features, labels, tsne_transformer,
-                 kernel_pca_transformer, pca_transformer):
-        self.features = features
-        self.labels = labels
-        self.tsne_transformer = tsne_transformer
-        self.kernel_pca_transformer = kernel_pca_transformer
-        self.pca_transformer = pca_transformer
-
-    def __getitem__(self, index):
-        normalized = self.features[index, :]
-        normalized = np.expand_dims(normalized, axis=0)
-
-        # Note: we are setting empty_value=1 to follow the setup in the paper
-        image = np.zeros((normalized.shape[1], normalized.shape[1], 3))
-        # image = np.zeros((3, image_size, image_size))
-        image[:, :, 0] = self.tsne_transformer.transform(normalized,
-                                                         empty_value=1)[0]
-        image[:, :,
-              1] = self.kernel_pca_transformer.transform(normalized,
-                                                         empty_value=1)[0]
-        image[:, :, 2] = self.pca_transformer.transform(normalized,
-                                                        empty_value=1)[0]
-
-        # Resize to target size
-        image = cv2.resize(image, (image_size, image_size),
-                           interpolation=cv2.INTER_CUBIC)
-        image = image.transpose(2, 0, 1)
-        # print(image.shape)
-
-        return {"x": image, "y": self.labels[index, :]}
-
-    def __len__(self):
-        return self.features.shape[0]
-
-
-class MultiTransformTestDataset(torch.utils.data.Dataset):
-    def __init__(self, features, labels, tsne_transformer,
-                 kernel_pca_transformer, pca_transformer):
-        self.features = features
-        self.labels = labels
-        self.tsne_transformer = tsne_transformer
-        self.kernel_pca_transformer = kernel_pca_transformer
-        self.pca_transformer = pca_transformer
-
-    def __getitem__(self, index):
-        normalized = self.features[index, :]
-        normalized = np.expand_dims(normalized, axis=0)
-
-        # Note: we are setting empty_value=1 to follow the setup in the paper
-        image = np.zeros((normalized.shape[1], normalized.shape[1], 3))
-        # image = np.zeros((3, image_size, image_size))
-        image[:, :, 0] = self.tsne_transformer.transform(normalized,
-                                                         empty_value=1)[0]
-        image[:, :,
-              1] = self.kernel_pca_transformer.transform(normalized,
-                                                         empty_value=1)[0]
-        image[:, :, 2] = self.pca_transformer.transform(normalized,
-                                                        empty_value=1)[0]
-
-        # Resize to target size
-        image = cv2.resize(image, (image_size, image_size),
-                           interpolation=cv2.INTER_CUBIC)
-        image = image.transpose(2, 0, 1)
-
-        return {"x": image, "y": -1}
-
-    def __len__(self):
-        return self.features.shape[0]
-
-
-# In[16]:
-
-
 class MoAImageSwapDataset(torch.utils.data.Dataset):
     def __init__(self,
                  features,
@@ -846,24 +751,14 @@ class MoAImageSwapDataset(torch.utils.data.Dataset):
         normalized = self.add_swap_noise(index, normalized)
         normalized = np.expand_dims(normalized, axis=0)
 
-        # Note: we are setting empty_value=1 to follow the setup in the paper
-        #         image = self.transformer.transform(normalized, empty_value=1)[0]
+        # Note: we are setting empty_value=0
         image = self.transformer.transform_3d(normalized, empty_value=0)[0]
 
-        # Crop to target size
-        #         image = (image * 255).astype(np.uint8)
-        #         image_aug = self.crop(image=image)
-        #         image = (image_aug / 255).astype(np.float32).clip(0, 1)
-
         # Resize to target size
-        #         gene_cht = cv2.resize(image, (image_size, image_size),
-        #                               interpolation=cv2.INTER_CUBIC)
-        #         image = cv2.resize(image, (image_size, image_size),
-        #                            interpolation=cv2.INTER_CUBIC)
-
-        # Convert to 3 channels
-        # image = np.repeat(image[np.newaxis, :, :], 3, axis=0)
-        # image = np.repeat(gene_cht[np.newaxis, :, :], 3, axis=0)
+        image = cv2.resize(image.transpose((1, 2, 0)),
+                           (image_size, image_size),
+                           interpolation=cv2.INTER_CUBIC)
+        image = image.transpose((2, 0, 1))
 
         return {"x": image, "y": self.labels[index, :]}
 
@@ -883,7 +778,7 @@ class MoAImageSwapDataset(torch.utils.data.Dataset):
         return self.features.shape[0]
 
 
-# In[17]:
+# In[16]:
 
 
 class MoAImageDataset(torch.utils.data.Dataset):
@@ -892,37 +787,18 @@ class MoAImageDataset(torch.utils.data.Dataset):
         self.labels = labels
         self.transformer = transformer
 
-
-#         self.transforms = transforms.Compose([
-#             # transforms.ToPILImage(),
-#             transforms.ToTensor(),
-#             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-#         ])
-
     def __getitem__(self, index):
         normalized = self.features[index, :]
         normalized = np.expand_dims(normalized, axis=0)
 
-        # Note: we are setting empty_value=1 to follow the setup in the paper
+        # Note: we are setting empty_value=0
         image = self.transformer.transform_3d(normalized, empty_value=0)[0]
-        #         image = self.transformer.transform(normalized, empty_value=0)[0]
 
         # Resize to target size
-        #         image = cv2.resize(image, (image_size, image_size),
-        #                            interpolation=cv2.INTER_CUBIC)
-
-        # Convert to 3 channels
-        #         image = np.repeat(image[np.newaxis, :, :], 3, axis=0)
-
-        # Normalized again by ImageNet mean and std
-        #         image[0, :, :] -= 0.485
-        #         image[1, :, :] -= 0.456
-        #         image[2, :, :] -= 0.406
-        #         image[0, :, :] /= 0.229
-        #         image[1, :, :] /= 0.224
-        #         image[2, :, :] /= 0.225
-
-        #         image = self.transforms(image.astype(np.float32))
+        image = cv2.resize(image.transpose((1, 2, 0)),
+                           (image_size, image_size),
+                           interpolation=cv2.INTER_CUBIC)
+        image = image.transpose((2, 0, 1))
 
         return {"x": image, "y": self.labels[index, :]}
 
@@ -940,24 +816,14 @@ class TestDataset(torch.utils.data.Dataset):
         normalized = self.features[index, :]
         normalized = np.expand_dims(normalized, axis=0)
 
-        # Note: we are setting empty_value=1 to follow the setup in the paper
-        #         image = self.transformer.transform(normalized, empty_value=0)[0]
+        # Note: we are setting empty_value=0
         image = self.transformer.transform_3d(normalized, empty_value=0)[0]
 
         # Resize to target size
-        #         image = cv2.resize(image, (image_size, image_size),
-        #                            interpolation=cv2.INTER_CUBIC)
-
-        # Convert to 3 channels
-        #         image = np.repeat(image[np.newaxis, :, :], 3, axis=0)
-
-        # Normalized again by ImageNet mean and std
-        #         image[0, :, :] -= 0.485
-        #         image[1, :, :] -= 0.456
-        #         image[2, :, :] -= 0.406
-        #         image[0, :, :] /= 0.229
-        #         image[1, :, :] /= 0.224
-        #         image[2, :, :] /= 0.225
+        image = cv2.resize(image.transpose((1, 2, 0)),
+                           (image_size, image_size),
+                           interpolation=cv2.INTER_CUBIC)
+        image = image.transpose((2, 0, 1))
 
         return {"x": image, "y": -1}
 
@@ -967,7 +833,7 @@ class TestDataset(torch.utils.data.Dataset):
 
 # ## Model Definition
 
-# In[18]:
+# In[17]:
 
 
 from torch.nn.modules.loss import _WeightedLoss
@@ -1001,71 +867,29 @@ class SmoothBCEwLogits(_WeightedLoss):
         return loss
 
 
+# In[18]:
+
+
+def initialize_weights(layer):
+    for m in layer.modules():
+        if isinstance(m, nn.Conv2d):
+            n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            m.weight.data.normal_(0, math.sqrt(2. / n))
+        elif isinstance(m, nn.BatchNorm2d):
+            m.weight.data.fill_(1.0)
+            m.bias.data.zero_()
+        elif isinstance(m, nn.Linear):
+            fan_out = m.weight.size(0)  # fan-out
+            fan_in = 0
+            init_range = 1.0 / math.sqrt(fan_in + fan_out)
+            m.weight.data.uniform_(-init_range, init_range)
+            m.bias.data.zero_()
+
+
 # In[19]:
 
 
-# Trick to fix NaN loss in PyTorch:
-# Reference: https://www.kaggle.com/c/lish-moa/discussion/188651
-def recalibrate_layer(layer):
-
-    if (torch.isnan(layer.weight_v).sum() > 0):
-        print('recalibrate layer.weight_v')
-        layer.weight_v = torch.nn.Parameter(
-            torch.where(torch.isnan(layer.weight_v),
-                        torch.zeros_like(layer.weight_v), layer.weight_v))
-        layer.weight_v = torch.nn.Parameter(layer.weight_v + 1e-7)
-
-    if (torch.isnan(layer.weight).sum() > 0):
-        print('recalibrate layer.weight')
-        layer.weight = torch.where(torch.isnan(layer.weight),
-                                   torch.zeros_like(layer.weight),
-                                   layer.weight)
-        layer.weight += 1e-7
-
-
-# In[20]:
-
-
-# Reference: https://github.com/rwightman/gen-efficientnet-pytorch/blob/master/geffnet/efficientnet_builder.py#L672
-def initialize_weight_goog(m, n='', fix_group_fanout=True):
-    # weight init as per Tensorflow Official impl
-    # https://github.com/tensorflow/tpu/blob/master/models/official/mnasnet/mnasnet_model.py
-    if isinstance(m, nn.Conv2d):
-        fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-        if fix_group_fanout:
-            fan_out //= m.groups
-        m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
-        if m.bias is not None:
-            m.bias.data.zero_()
-    elif isinstance(m, nn.BatchNorm2d):
-        m.weight.data.fill_(1.0)
-        m.bias.data.zero_()
-    elif isinstance(m, nn.Linear):
-        fan_out = m.weight.size(0)  # fan-out
-        fan_in = 0
-        if 'routing_fn' in n:
-            fan_in = m.weight.size(1)
-        init_range = 1.0 / math.sqrt(fan_in + fan_out)
-        m.weight.data.uniform_(-init_range, init_range)
-        m.bias.data.zero_()
-
-
-def initialize_weight_default(m, n=''):
-    if isinstance(m, nn.Conv2d):
-        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-    elif isinstance(m, nn.BatchNorm2d):
-        m.weight.data.fill_(1.0)
-        m.bias.data.zero_()
-    elif isinstance(m, nn.Linear):
-        nn.init.kaiming_uniform_(m.weight,
-                                 mode='fan_in',
-                                 nonlinearity='linear')
-
-
-# In[21]:
-
-
-class MoAEfficientNet(pl.LightningModule):
+class MoAResNeSt(pl.LightningModule):
     def __init__(
             self,
             pretrained_model_name,
@@ -1074,51 +898,32 @@ class MoAEfficientNet(pl.LightningModule):
             test_set=None,
             transformer=None,
             num_classes=206,
-            in_chans=3,
-            drop_rate=0.,
-            drop_connect_rate=0.,
+            final_drop=0.0,
+            dropblock_prob=0,
             fc_size=512,
-            learning_rate=1e-3,
-            weight_init='goog'):
-        super(MoAEfficientNet, self).__init__()
+            learning_rate=1e-3):
+        super(MoAResNeSt, self).__init__()
 
         self.train_data, self.train_labels = training_set
         self.valid_data, self.valid_labels = valid_set
         self.test_data = test_set
         self.transformer = transformer
 
-        self.backbone = getattr(geffnet, pretrained_model)(
+        self.backbone = getattr(resnest.torch, pretrained_model)(
             pretrained=True,
-            in_chans=in_chans,
-            drop_rate=drop_rate,
-            drop_connect_rate=drop_connect_rate,
-            weight_init=weight_init)
+            final_drop=final_drop)
 
-        #         self.backbone.classifier = nn.Sequential(
-        #             # recalibrate_layer(),
-        #             nn.Linear(self.backbone.classifier.in_features, fc_size,
-        #                       bias=True),
-        #             nn.ReLU(),
-        #             nn.Dropout(p=drop_rate),
-        #             # recalibrate_layer(),
-        #             nn.Linear(fc_size, fc_size, bias=True),
-        #             nn.ReLU(),
-        #             nn.Dropout(p=drop_rate),
-        #             nn.Linear(fc_size, num_classes, bias=True))
-
-        self.backbone.classifier = nn.Sequential(
-            nn.Linear(self.backbone.classifier.in_features, fc_size,
-                      bias=True), nn.ELU(),
-            nn.Linear(fc_size, num_classes, bias=True))
+        self.backbone.fc = nn.Sequential(
+            nn.Linear(self.backbone.fc.in_features, fc_size, bias=True),
+            nn.ELU(), nn.Linear(fc_size, num_classes, bias=True))
 
         if self.training:
-            for m in self.backbone.classifier.modules():
-                initialize_weight_goog(m)
+            initialize_weights(self.backbone.fc)
 
         # Save passed hyperparameters
         self.save_hyperparameters("pretrained_model_name", "num_classes",
-                                  "in_chans", "drop_rate", "drop_connect_rate",
-                                  "weight_init", "fc_size", "learning_rate")
+                                  "final_drop", "dropblock_prob", "fc_size",
+                                  "learning_rate")
 
     def forward(self, x):
         return self.backbone(x)
@@ -1269,28 +1074,26 @@ class MoAEfficientNet(pl.LightningModule):
         return [optimizer], [scheduler]
 
 
-# In[22]:
+# In[20]:
 
 
-# model = MoAEfficientNet(
+# model = MoAResNeSt(
 #     pretrained_model,
 #     training_set=(None, None),  # tuple
 #     valid_set=(None, None),  # tuple
 #     test_set=None,
 #     transformer=None,
-#     num_classes=len(train_classes),
-#     in_chans=3,
-#     drop_rate=drop_rate,
-#     drop_connect_rate=drop_connect_rate,
+#     num_classes=206,
+#     final_drop=0.0,
+#     dropblock_prob=0,
 #     fc_size=fc_size,
-#     learning_rate=learning_rate,
-#     weight_init='goog')
+#     learning_rate=learning_rate)
 # print(model)
 
 
-# ## Training
+# ## Training/Inference
 
-# In[23]:
+# In[21]:
 
 
 kfolds = 10
@@ -1302,26 +1105,24 @@ label_counts = np.sum(train_labels.drop("sig_id", axis=1), axis=0)
 y_labels = label_counts.index.tolist()
 
 
-# In[24]:
+# In[22]:
 
 
 def get_model(training_set, valid_set, test_set, transformer, model_path=None):
     if training_mode:
-        model = MoAEfficientNet(
+        model = MoAResNeSt(
             pretrained_model_name=pretrained_model,
             training_set=training_set,  # tuple
             valid_set=valid_set,  # tuple
             test_set=test_set,
             transformer=transformer,
             num_classes=len(train_classes),
-            in_chans=3,
-            drop_rate=drop_rate,
-            drop_connect_rate=drop_connect_rate,
+            final_drop=final_drop,
+            dropblock_prob=dropblock_prob,
             fc_size=fc_size,
-            learning_rate=learning_rate,
-            weight_init='goog')
+            learning_rate=learning_rate)
     else:
-        model = MoAEfficientNet.load_from_checkpoint(
+        model = MoAResNeSt.load_from_checkpoint(
             model_path,
             pretrained_model_name=pretrained_model,
             training_set=training_set,  # tuple
@@ -1344,7 +1145,7 @@ def load_pickle(model_output_folder, fold_i, name):
     return load(open(f"{model_output_folder}/fold{fold_i}_{name}.pkl", 'rb'))
 
 
-# In[25]:
+# In[23]:
 
 
 def norm2_normalization(train, valid, test):
@@ -1353,6 +1154,25 @@ def norm2_normalization(train, valid, test):
     valid = scaler.transform(valid)
     test = scaler.transform(test)
     return train, valid, test, scaler
+
+
+def quantile_transform(train, valid, test):
+    q_scaler = QuantileTransformer(n_quantiles=1000,
+                                   output_distribution='normal',
+                                   ignore_implicit_zeros=False,
+                                   subsample=100000,
+                                   random_state=rand_seed)
+    train = q_scaler.fit_transform(train)
+    valid = q_scaler.transform(valid)
+    test = q_scaler.transform(test)
+
+    # Transform to [0, 1]
+    min_max_scaler = MinMaxScaler(feature_range=(0, 1))
+    train = min_max_scaler.fit_transform(train)
+    valid = min_max_scaler.transform(valid)
+    test = min_max_scaler.transform(test)
+
+    return train, valid, test, q_scaler, min_max_scaler
 
 
 def extract_feature_map(train,
@@ -1368,7 +1188,7 @@ def extract_feature_map(train,
     return transformer
 
 
-# In[26]:
+# In[24]:
 
 
 def mean_logloss(y_pred, y_true):
@@ -1377,7 +1197,7 @@ def mean_logloss(y_pred, y_true):
     return np.mean(-logloss)
 
 
-# In[27]:
+# In[25]:
 
 
 # Ensure Reproducibility
@@ -1417,7 +1237,8 @@ for i, (train_index, val_index) in enumerate(
                                           feature_extractor='tsne_exact',
                                           resolution=resolution,
                                           perplexity=perplexity)
-        save_pickle(transformer, model_output_folder, i, "deepinsight-transform")
+        save_pickle(transformer, model_output_folder, i,
+                    "deepinsight-transform")
 
         model = get_model(training_set=(train, fold_train_labels),
                           valid_set=(valid, fold_valid_labels),
@@ -1466,9 +1287,9 @@ for i, (train_index, val_index) in enumerate(
                 model,
                 min_lr=1e-7,
                 max_lr=1e2,
-                num_training=500,
+                num_training=100,
                 mode='exponential',
-                early_stop_threshold=10.0,
+                early_stop_threshold=100.0,
             )
             fig = lr_finder.plot(suggest=True)
             fig.show()
@@ -1478,9 +1299,9 @@ for i, (train_index, val_index) in enumerate(
 
             # Update hparams of the model
             model.hparams.learning_rate = suggested_lr
-            print(f"Suggested Learning Rate: {model.hparams.learning_rate:.6f}")
+            print(
+                f"Suggested Learning Rate: {model.hparams.learning_rate:.6f}")
 
-            # trainer.fit(model)
         else:
             trainer = Trainer(
                 gpus=gpus,
@@ -1499,7 +1320,7 @@ for i, (train_index, val_index) in enumerate(
 
             # Load best model
             seed_everything(rand_seed)
-            best_model = MoAEfficientNet.load_from_checkpoint(
+            best_model = MoAResNeSt.load_from_checkpoint(
                 checkpoint_callback.best_model_path,
                 pretrained_model_name=pretrained_model,
                 training_set=(train, fold_train_labels),  # tuple
@@ -1566,11 +1387,14 @@ for i, (train_index, val_index) in enumerate(
 
         del model, trainer, scaler, transformer, test
 
+    torch.cuda.empty_cache()
+    gc.collect()
+
     if debug_mode:
         break
 
 
-# In[28]:
+# In[26]:
 
 
 if training_mode:
@@ -1584,53 +1408,41 @@ oof_loss = mean_logloss(oof_predictions,
 print(f"OOF Validation Loss: {oof_loss:.6f}")
 
 
-# In[29]:
+# In[27]:
 
 
-# [Avg/Min/Max Channels]
-# OOF Validation Loss: 0.014802
-# "drop_connect_rate":     0.2
-# "drop_rate":             0.3
+# oof_filename = "_".join(
+#     [f"{k}={v}" for k, v in dict(model.hparams).items()])
+# with open(f'oof_{experiment_name}_{oof_loss}.npy', 'wb') as f:
+#     np.save(f, oof_predictions)
+
+# with open(f'oof_{experiment_name}_{oof_loss}.npy', 'rb') as f:
+#     tmp = np.load(f)
+#     print(tmp.shape)
+
+
+# In[28]:
+
+
+# [ResNeSt]
+# OOF Validation Loss: 0.014620
+# "dropblock_prob":        0.0
 # "fc_size":               512
-# "in_chans":              3
+# "final_drop":            0.0
 # "learning_rate":         0.000352
 # "num_classes":           206
-# "pretrained_model_name": tf_efficientnet_b3_ns
-# "weight_init":           goog
-# (23814, 206)
+# "pretrained_model_name": resnest50_fast_2s2x40d
 
-
-# In[30]:
-
-
-# [ELU]
-# OOF Validation Loss: 0.014932
-# "drop_connect_rate":     0.2
-# "drop_rate":             0.3
+# OOF Validation Loss: 0.014560
+# "dropblock_prob":        0.0
 # "fc_size":               512
-# "in_chans":              3
-# "learning_rate":         0.000282
+# "final_drop":            0.2
+# "learning_rate":         0.000352
 # "num_classes":           206
-# "pretrained_model_name": tf_efficientnet_b3_ns
-# "weight_init":           goog
+# "pretrained_model_name": resnest50_fast_2s2x40d
 
 
-# In[31]:
-
-
-# [SELU]
-# OOF Validation Loss: 0.014948
-# "drop_connect_rate":     0.2
-# "drop_rate":             0.3
-# "fc_size":               512
-# "in_chans":              3
-# "learning_rate":         0.000282
-# "num_classes":           206
-# "pretrained_model_name": tf_efficientnet_b3_ns
-# "weight_init":           goog
-
-
-# In[32]:
+# In[29]:
 
 
 if training_mode and best_model is not None:
@@ -1668,7 +1480,7 @@ if training_mode and best_model is not None:
 
 # ## Submission
 
-# In[33]:
+# In[30]:
 
 
 print(kfold_submit_preds.shape)
@@ -1680,10 +1492,10 @@ submission[train_classes] = kfold_submit_preds
 # Set control type to 0 as control perturbations have no MoAs
 submission.loc[test_features['cp_type'] == 0, submission.columns[1:]] = 0
 # submission.to_csv('submission.csv', index=False)
-submission.to_csv('submission_effnet_v7_b3.csv', index=False)
+submission.to_csv('submission_resnest_v2.csv', index=False)
 
 
-# In[34]:
+# In[31]:
 
 
 submission
@@ -1695,7 +1507,7 @@ submission
 
 
 
-# In[35]:
+# In[32]:
 
 
 torch.cuda.empty_cache()

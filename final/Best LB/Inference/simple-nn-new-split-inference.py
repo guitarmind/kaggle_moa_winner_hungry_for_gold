@@ -1,21 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # This is an Updated version of my previous public kernel <https://www.kaggle.com/kushal1506/moa-pytorch-0-01859-rankgauss-pca-nn>
-
-# ## Updates -
-# 
-# * Implementing Feature Engineering 
-# * Implementing Label Smoothing
-
-# # **If U find it helpful and consider forking , please do Upvote** :)
 
 # In[1]:
 
 
 import sys
 #sys.path.append('../input/iterativestratification')
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+sys.path.append('../input/iterative-stratification/')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 #from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 #from IPython import get_ipython
@@ -79,7 +71,6 @@ train_drugs = pd.read_csv('../input/lish-moa/train_drug.csv')
 test_features = pd.read_csv('../input/lish-moa/test_features.csv')
 sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
 train_features = train_drugs.merge(train_features,on='sig_id',how='left')
-#train_target_scored = train_target_scored.merge(train_drug,on='sig_id')
 
 
 # In[7]:
@@ -139,22 +130,17 @@ seed_everything(seed=42)
 n_comp = 90  #<--Update
 
 data = pd.concat([pd.DataFrame(train_features[GENES]), pd.DataFrame(test_features[GENES])])
-#data2 = (FactorAnalysis(n_components=n_comp, random_state=42).fit_transform(data[GENES]))
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp, random_state=1903).fit(data[GENES])
     pd.to_pickle(fa, f'{MODEL_DIR}/{NB}_factor_analysis_g.pkl')
-    #umap = UMAP(n_components=n_dim, random_state=1903).fit(data[GENES])
-    #pd.to_pickle(umap, f'{MODEL_DIR}/{NB}_umap_g.pkl')
 else:
     fa = pd.read_pickle(f'{MODEL_DIR}/{NB}_factor_analysis_g.pkl')
-    #umap = pd.read_pickle(f'{MODEL_DIR}/{NB}_umap_g.pkl')
 data2 = fa.transform(data[GENES])
 train2 = data2[:train_features.shape[0]]; test2 = data2[-test_features.shape[0]:]
 
 train2 = pd.DataFrame(train2, columns=[f'pca_G-{i}' for i in range(n_comp)])
 test2 = pd.DataFrame(test2, columns=[f'pca_G-{i}' for i in range(n_comp)])
 
-# drop_cols = [f'c-{i}' for i in range(n_comp,len(GENES))]
 train_features = pd.concat((train_features, train2), axis=1)
 test_features = pd.concat((test_features, test2), axis=1)
 
@@ -169,19 +155,14 @@ data = pd.concat([pd.DataFrame(train_features[CELLS]), pd.DataFrame(test_feature
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp, random_state=1903).fit(data[CELLS])
     pd.to_pickle(fa, f'{MODEL_DIR}/{NB}_factor_analysis_c.pkl')
-    #umap = UMAP(n_components=n_dim, random_state=1903).fit(data[GENES])
-    #pd.to_pickle(umap, f'{MODEL_DIR}/{NB}_umap_g.pkl')
 else:
     fa = pd.read_pickle(f'{MODEL_DIR}/{NB}_factor_analysis_c.pkl')
-    #umap = pd.read_pickle(f'{MODEL_DIR}/{NB}_umap_g.pkl')
 data2 = fa.transform(data[CELLS])
-#data2 = (FactorAnalysis(n_components=n_comp, random_state=42).fit_transform(data[CELLS]))
 train2 = data2[:train_features.shape[0]]; test2 = data2[-test_features.shape[0]:]
 
 train2 = pd.DataFrame(train2, columns=[f'pca_C-{i}' for i in range(n_comp)])
 test2 = pd.DataFrame(test2, columns=[f'pca_C-{i}' for i in range(n_comp)])
 
-# drop_cols = [f'c-{i}' for i in range(n_comp,len(CELLS))]
 train_features = pd.concat((train_features, train2), axis=1)
 test_features = pd.concat((test_features, test2), axis=1)
 
@@ -204,7 +185,6 @@ train_features
 from sklearn.feature_selection import VarianceThreshold
 
 
-#var_thresh = VarianceThreshold(0.8)  #<-- Update
 var_thresh = QuantileTransformer(n_quantiles=100,random_state=0, output_distribution="normal")
 
 data = train_features.append(test_features)
@@ -235,28 +215,6 @@ train_features.shape
 # In[16]:
 
 
-from sklearn.cluster import KMeans
-def fe_cluster(train, test, n_clusters_g = 45, n_clusters_c = 15, SEED = 123):
-    
-    features_g = list(train.columns[4:776])
-    features_c = list(train.columns[776:876])
-    
-    def create_cluster(train, test, features, kind = 'g', n_clusters = n_clusters_g):
-        train_ = train[features].copy()
-        test_ = test[features].copy()
-        data = pd.concat([train_, test_], axis = 0)
-        kmeans = KMeans(n_clusters = n_clusters, random_state = SEED).fit(data)
-        train[f'clusters_{kind}'] = kmeans.labels_[:train.shape[0]]
-        test[f'clusters_{kind}'] = kmeans.labels_[train.shape[0]:]
-        train = pd.get_dummies(train, columns = [f'clusters_{kind}'])
-        test = pd.get_dummies(test, columns = [f'clusters_{kind}'])
-        return train, test
-    
-    train, test = create_cluster(train, test, features_g, kind = 'g', n_clusters = n_clusters_g)
-    train, test = create_cluster(train, test, features_c, kind = 'c', n_clusters = n_clusters_c)
-    return train, test
-
-#train_features ,test_features=fe_cluster(train_features,test_features)
 
 
 # In[17]:
@@ -319,18 +277,6 @@ target_cols = target.drop('sig_id', axis=1).columns.values.tolist()
 
 
 # In[22]:
-
-
-#folds = train.copy()
-
-#mskf = MultilabelStratifiedKFold(n_splits=5)
-
-#for f, (t_idx, v_idx) in enumerate(mskf.split(X=train, y=target)):
-#    folds.loc[v_idx, 'kfold'] = int(f)
-
-#folds['kfold'] = folds['kfold'].astype(int)
-#folds
-
 
 # In[23]:
 
@@ -683,8 +629,6 @@ def run_training(fold, seed):
     model.load_state_dict(torch.load(f"{MODEL_DIR}/{NB}-scored2-SEED{seed}-FOLD{fold}_.pth"))
     model.to(DEVICE)
     
- #   if not IS_TRAIN:
-  #  valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)
     oof[val_idx] = valid_preds     
     
     predictions = np.zeros((len(test_), target.iloc[:, 1:].shape[1]))
@@ -762,7 +706,7 @@ print("CV log_loss: ", score)
 
 
 sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission.csv', index=False)
+sub.to_csv('submission_script_simpleNN_newcv_0.01830.csv.csv', index=False)
 
 
 # In[45]:
