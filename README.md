@@ -1,27 +1,33 @@
-Below you can find an outline of how to reproduce the solution by team "Hungry for gold🥇🥇" for the kaggle Mechanisms of Action (MoA) Prediction competition.
+# 1st Place Winning Solution - Mechanisms of Action (MoA) Prediction
 
-# Archive Contents
-- final: scripts used for the final submissions
-    - Best CV: set of model scripts used in our first submission, best CV score blending
-    - Best LB: set of model scripts used in our second submission, best public LB score blending
-        - Training: jupyter notebooks for each single models to preprocess the input data and save trained model weights. to be run in kaggle GPU notebook environment.
-        - Inference: python scripts for each single models to preprocess the input data and make inferences using pre-trained weights.
-        - Submission: predicted labels on public test data.
-        - a notebook to blend single model predictions
+This documentation outlines how to reproduce the 1st place solution by team "Hungry for gold🥇🥇" for the kaggle Mechanisms of Action (MoA) Prediction competition.
 
-# Hardware
-We used kaggle notebook instance with GPU enabled to run all data preprocessing, model training, blending weight search and inference.
+## Archive Contents
 
-https://www.kaggle.com/docs/notebooks
+- In the `final` folder: All of the scripts used for the final submissions
+    - **Best CV:** A set of model scripts used in our first submission, best CV score blending
+    - **Best LB:** A set of model scripts used in our second submission, best public LB score blending
+        - Training: Includes jupyter notebooks for each single models to preprocess the input data and save trained model weights. to be run in kaggle GPU notebook environment.
+        - Inference: Includes Python scripts for each single models to preprocess the input data and make inferences using pre-trained weights. Note that for 2-StageNN+TabNet model, we were running it as a notebooks due to unknow Kaggle environment errors to the UMAP dependency library `numba.core`.
+        - Submission: Includes predicted labels on public test data.
+        - A notebook to blend single model predictions
 
-# Software
-We used kaggle GPU notebooks to run all our scripts. 
+## Hardware
 
-https://github.com/Kaggle/docker-python/blob/master/gpu.Dockerfile
+Most of our single models were using Kaggle Notebook instances with GPU enabled to run all data preprocessing, model training, blending weight search and inference.
 
-Below are the packages used in addition to the ones included in the default kaggle docker python.
+[https://www.kaggle.com/docs/notebooks](https://www.kaggle.com/docs/notebooks)
 
-| package name | repository | kaggle dataset |
+For [DeepInsight CNNs](https://www.kaggle.com/c/lish-moa/discussion/195378), such as `EfficientNet B3 NS` and `ResNeSt`, they are trained on a local machine with 64GB RAM and two Nividia 2080-Ti GPUs. Each of them took about 12-25 hours to train for 10-folds.
+
+
+## Software
+
+We used [Kaggle GPU notebooks](https://github.com/Kaggle/docker-python/blob/master/gpu.Dockerfile) to run all our inference scripts.
+
+Below are the packages used in addition to the ones included in the default Kaggle Docker environment for Python.
+
+| Package Name | Repository | Kaggle Dataset |
 | --- |--- | --- |
 | pytorch-lightning | https://github.com/PyTorchLightning/pytorch-lightning|https://www.kaggle.com/markpeng/pytorch-lightning |
 | pytorch-optimizer | https://github.com/jettify/pytorch-optimizer |https://www.kaggle.com/markpeng/pytorch-optimizer |
@@ -33,15 +39,6 @@ Below are the packages used in addition to the ones included in the default kagg
 
 <!-- python packages are also detailed separately in `requirements.txt` -->
 
-# Data Setup
+## License
 
-# Data Processing
-Data processing was done separately in each single model scripts.
-
-# Model Build
-## Training
-
-## Blend weights search
-
-## Inference
-
+All of our solution code are open-sourced under the [Apache 2.0](LICENSE) license.
