@@ -59,7 +59,7 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 |ResNeSt V2|0.01576|0.01854|0.01636|deepinsight-resnest-lightning-v2-train.ipynb|deepinsight-resnest-lightning-v2-inference.py |
 
  - Original Submission Notebook: `./final/Best LB/fork-of-blending-with-6-models-5old-1new.ipynb`
- - Cleaned Submission Notebook: `./final/Best CV/final-best-lb-cleaned.ipynb`
+ - Cleaned Submission Notebook: `./final/Best LB/final-best-lb-cleaned.ipynb`
 
 #### Best CV Blend
 
