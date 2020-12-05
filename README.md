@@ -58,8 +58,8 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 |EfficientNet B3 Noisy Student |0.01602|0.01850|0.01634|deepinsight-efficientnet-lightning-v7-b3-train.ipynb|deepinsight-efficientnet-lightning-v7-b3-inference.py|
 |ResNeSt V2|0.01576|0.01854|0.01636|deepinsight-resnest-lightning-v2-train.ipynb|deepinsight-resnest-lightning-v2-inference.py |
 
- - Original Submission Notebook: [final/Best LB/fork-of-blending-with-6-models-5old-1new.ipynb](final/Best LB/fork-of-blending-with-6-models-5old-1new.ipynb)
- - Cleaned Submission Notebook: [final/Best CV/final-best-lb-cleaned.ipynb](final/Best CV/final-best-lb-cleaned.ipynb)
+ - Original Submission Notebook: `./final/Best LB/fork-of-blending-with-6-models-5old-1new.ipynb`
+ - Cleaned Submission Notebook: `./final/Best CV/final-best-lb-cleaned.ipynb`
 
 #### Best CV Blend
 
@@ -71,8 +71,8 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 |ResNeSt V1|0.01582|0.01853|0.01636|deepinsight-resnest-lightning-v1-train.ipynb|deepinsight-resnest-lightning-v1-inference.py|
 |ResNeSt V2|0.01576|0.01854|0.01636|deepinsight-resnest-lightning-v2-train.ipynb|deepinsight-resnest-lightning-v2-inference.py|
 
-- Original Submission Notebook: [final/Best CV/blend-search-optuna-v7.ipynb](final/Best CV/blend-search-optuna-v7.ipynb)
-- Cleaned Submission Notebook: [final/Best CV/final_best_CV_cleaned.ipynb](final/Best CV/final_best_CV_cleaned.ipynb)
+- Original Submission Notebook: `./final/Best CV/blend-search-optuna-v7.ipynb`
+- Cleaned Submission Notebook: `./final/Best CV/final-best-CV-cleaned.ipynb`
 
 ## Training
 
