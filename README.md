@@ -46,7 +46,8 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 
 ### Models Summary
 
-#### Best LB blend
+#### Best LB Blend
+
 | model name| cv | public lb | private lb | training notebook | inference script |
 |-|-|-|-|-|-|
 |3-stage NN|0.01561|0.01823|0.01618|3-stagenn-train.ipynb|3stage-nn-inference.py|
@@ -57,9 +58,10 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 |EfficientNet B3 Noisy Student |0.01602|0.01850|0.01634|deepinsight-efficientnet-lightning-v7-b3-train.ipynb|deepinsight-efficientnet-lightning-v7-b3-inference.py|
 |ResNeSt V2|0.01576|0.01854|0.01636|deepinsight-resnest-lightning-v2-train.ipynb|deepinsight-resnest-lightning-v2-inference.py |
 
- - Submission Notebook: ./final/Best LB/fork-of-blending-with-6-models-5old-1new.ipynb
+ - Submission Notebook: `./final/Best LB/fork-of-blending-with-6-models-5old-1new.ipynb`
 
-#### Best CV blend
+
+#### Best CV Blend
 | model name| cv | public lb | private lb | training notebook | inference script |
 |-|-|-|-|-|-|
 |3-stage NN|0.01561|0.01823|0.01618|3stagenn-10folds-train.ipynb|3stagenn-10folds-inference.py|
@@ -68,11 +70,11 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 |ResNeSt V1|0.01582|0.01853|0.01636|deepinsight-resnest-lightning-v1-train.ipynb|deepinsight-resnest-lightning-v1-inference.py|
 |ResNeSt V2|0.01576|0.01854|0.01636|deepinsight-resnest-lightning-v2-train.ipynb|deepinsight-resnest-lightning-v2-inference.py|
 
-- Submission Notebook: ./final/Best CV/blend-search-optuna-v7.ipynb
+- Submission Notebook: `./final/Best CV/blend-search-optuna-v7.ipynb`
 
 ## Training
 
-All of the trainings can be done by running notebooks above as a kaggle notebook. This generates pickled preprocessing modules, model weights used by inference scripts, and predictions used in blend weights search.
+All of the training can be done by running notebooks above as a kaggle notebook. This generates pickled preprocessing modules, model weights used by inference scripts, and predictions used in blend weights search.
 
 ## Blend Weights Search
 
@@ -82,7 +84,7 @@ Once oof predictions are generated, run the blend weight search notebooks to det
 
 The submission notebooks make inference by running each single-model inference scripts and blending the predictions. All of the training notebooks must be added as dataset to load preprocessing class instances and model weights.
 
-To make predictions on a new dataset, you just need to replace "test_features.csv" in input dataset.
+To make predictions on a new dataset, you just need to replace `test_features.csv` in input dataset.
 
 
 ## License
