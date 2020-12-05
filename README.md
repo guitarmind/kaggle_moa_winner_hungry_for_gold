@@ -1,6 +1,6 @@
 # 1st Place Winning Solution - Mechanisms of Action (MoA) Prediction
 
-This documentation outlines how to reproduce the 1st place solution by team ***Hungry for gold🥇🥇*** for the kaggle Mechanisms of Action (MoA) Prediction competition.
+This documentation outlines how to reproduce the 1st place solution by the ***Hungry for gold🥇🥇*** team for the kaggle Mechanisms of Action (MoA) Prediction competition.
 
 ## Archive Contents
 
