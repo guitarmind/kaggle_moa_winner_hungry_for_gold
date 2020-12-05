@@ -7,8 +7,8 @@ This documentation outlines how to reproduce the 1st place solution by team "Hun
 - In the `final` folder: All of the scripts used for the final submissions
     - **Best CV:** A set of model scripts used in our first submission, best CV score blending
     - **Best LB:** A set of model scripts used in our second submission, best public LB score blending
-        - **Training:** Includes jupyter notebooks for each single models to preprocess the input data and save trained model weights. to be run in kaggle GPU notebook environment.
-        - **Inference:** Includes Python scripts for each single models to preprocess the input data and make inferences using pre-trained weights. Note that for 2-StageNN+TabNet model, we were running it as a notebooks due to unknow Kaggle environment errors to the `UMAP` dependency library "`numba.core`".
+        - **Training:** Includes Jupyter notebooks for each single models to preprocess the input data and save trained model weights. to be run in kaggle GPU notebook environment.
+        - **Inference:** Includes Python scripts for each single models to preprocess the input data and make inferences using pre-trained weights. Note that for the `2-StageNN+TabNet` model, we were running it as a notebooks due to unknown Kaggle environment errors to the `UMAP` dependency library "`numba.core`".
         - **Submission:** Includes predicted labels on public test data.
         - A notebook to blend single model predictions
 
@@ -18,7 +18,7 @@ Most of our single models were using Kaggle Notebook instances with GPU enabled 
 
 [https://www.kaggle.com/docs/notebooks](https://www.kaggle.com/docs/notebooks)
 
-For [DeepInsight CNNs](https://www.kaggle.com/c/lish-moa/discussion/195378), such as `EfficientNet B3 NS` and `ResNeSt`, they are trained on a local machine with 64GB RAM and two Nividia 2080-Ti GPUs. Each of them took about 12-25 hours to train for 10-folds.
+For [DeepInsight CNNs](https://www.kaggle.com/c/lish-moa/discussion/195378), such as `EfficientNet B3 NS` and `ResNeSt`, they were trained on a local machine with 64GB RAM and two Nividia 2080-Ti GPUs. Each of them took about 12-25 hours to train for 10-folds.
 
 
 ## Software
