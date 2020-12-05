@@ -48,7 +48,7 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 
 #### Best LB Blend
 
-| model name| cv | public lb | private lb | training notebook | inference script |
+| Model Name| CV | Public LB | Private LB | Training Notebook | Inference Script |
 |-|-|-|-|-|-|
 |3-stage NN|0.01561|0.01823|0.01618|3-stagenn-train.ipynb|3stage-nn-inference.py|
 |2-stage NN + TabNet |0.01615|0.01837|0.01625|2stagenn-tabnet-train.ipynb|2stage-nn-tabnet-inference.ipynb|
@@ -63,7 +63,7 @@ Please add https://www.kaggle.com/c/lish-moa/data as the input dataset.
 
 #### Best CV Blend
 
-| model name| cv | public lb | private lb | training notebook | inference script |
+| Model Name| CV | Public LB | Private LB | Training Notebook | Inference Script |
 |-|-|-|-|-|-|
 |3-stage NN|0.01561|0.01823|0.01618|3stagenn-10folds-train.ipynb|3stagenn-10folds-inference.py|
 |2-heads ResNet V2 |0.01566|0.01844|0.01623|2heads-resnest-train.ipynb|2heads-resnest-inference.py|
