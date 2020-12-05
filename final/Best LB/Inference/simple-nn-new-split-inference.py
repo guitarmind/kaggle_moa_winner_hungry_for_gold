@@ -7,7 +7,7 @@
 
 import sys
 #sys.path.append('../input/iterativestratification')
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+sys.path.append('../input/iterative-stratification/')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 #from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 #from IPython import get_ipython
