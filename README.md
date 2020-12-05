@@ -8,7 +8,7 @@ This documentation outlines how to reproduce the 1st place solution by team "Hun
     - **Best CV:** A set of model scripts used in our first submission, best CV score blending
     - **Best LB:** A set of model scripts used in our second submission, best public LB score blending
         - **Training:** Includes jupyter notebooks for each single models to preprocess the input data and save trained model weights. to be run in kaggle GPU notebook environment.
-        - **Inference:** Includes Python scripts for each single models to preprocess the input data and make inferences using pre-trained weights. Note that for 2-StageNN+TabNet model, we were running it as a notebooks due to unknow Kaggle environment errors to the UMAP dependency library `numba.core`.
+        - **Inference:** Includes Python scripts for each single models to preprocess the input data and make inferences using pre-trained weights. Note that for 2-StageNN+TabNet model, we were running it as a notebooks due to unknow Kaggle environment errors to the `UMAP` dependency library "`numba.core`".
         - **Submission:** Includes predicted labels on public test data.
         - A notebook to blend single model predictions
 
