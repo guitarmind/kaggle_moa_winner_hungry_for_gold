@@ -7,7 +7,7 @@
 
 
 import sys
-sys.path.append('../input/iterative-stratification/iterative-stratification-master')
+sys.path.append('../input/iterative-stratification/')
 sys.path.append('../input/umaplearn/umap')
 
 import os
