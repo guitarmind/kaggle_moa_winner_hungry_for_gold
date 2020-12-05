@@ -46,7 +46,7 @@ training_mode = False
 
 import sys
 if kernel_mode:
-    sys.path.insert(0, "../input/iterative-stratification/iterative-stratification-master")
+    sys.path.insert(0, "../input/iterative-stratification/")
     sys.path.insert(0, "../input/pytorch-lightning")
     sys.path.insert(0, "../input/gen-efficientnet-pytorch")
     sys.path.insert(0, "../input/pytorch-optimizer")
