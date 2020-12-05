@@ -706,7 +706,7 @@ print("CV log_loss: ", score)
 
 
 sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission.csv', index=False)
+sub.to_csv('submission_script_simpleNN_newcv_0.01830.csv.csv', index=False)
 
 
 # In[45]:

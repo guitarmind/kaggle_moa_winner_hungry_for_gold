@@ -349,8 +349,8 @@ sub
 sub.iloc[test_features['cp_type'] == 'ctl_vehicle', 1:] = 0
 
 # Save Submission
-# sub.to_csv('submission_2heads-looper-super-puper.csv', index=False)
-sub.to_csv('submission.csv', index=False)
+sub.to_csv('submission_2heads-looper-super-puper_0.01836.csv', index=False)
+# sub.to_csv('submission.csv', index=False)
 
 
 # In[18]:
