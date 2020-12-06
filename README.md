@@ -36,6 +36,8 @@ Below are the packages used in addition to the ones included in the default Kagg
 | ResNeSt=0.0.6| https://github.com/zhanghang1989/ResNeSt | https://www.kaggle.com/markpeng/resnest |
 | umap-learn=0.4.6 | https://github.com/lmcinnes/umap | https://www.kaggle.com/kozistr/umaplearn|
 | iterative-stratification=0.1.6 |https://github.com/trent-b/iterative-stratification |https://www.kaggle.com/yasufuminakama/iterative-stratification |
+| gen-efficientnet-pytorch |https://github.com/rwightman/gen-efficientnet-pytorch |https://www.kaggle.com/markpeng/gen-efficientnet-pytorch |
+| ResNeSt |https://github.com/zhanghang1989/ResNeSt |https://www.kaggle.com/markpeng/resnest |
 
 
 ## Data Setup
