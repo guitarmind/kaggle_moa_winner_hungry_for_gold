@@ -2,6 +2,8 @@
 
 This documentation outlines how to reproduce the 1st place solution by the ***Hungry for gold🥇🥇*** team for the Mechanisms of Action (MoA) Prediction competition on Kaggle.
 
+[Winning Solution Writeup in PDF](moa_hungry_for_gold_winning_solution_writeup.pdf)
+
 ## Archive Contents
 
 - In the `final` folder: All of the scripts used for the final submissions
