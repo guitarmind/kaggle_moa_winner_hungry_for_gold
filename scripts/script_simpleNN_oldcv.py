@@ -638,6 +638,10 @@ def run_training(fold, seed):
 
     model.load_state_dict(torch.load(f"{model_output_folder}/SEED{seed}_FOLD{fold}_.pth"))
     model.to(DEVICE)
+    
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    num_params = sum([np.prod(p.size()) for p in model_parameters])
+    print(f"Model Size: {num_params:,} trainable parameters")
 
  #   if not IS_TRAIN:
     valid_loss, valid_preds = valid_fn(model, loss_fn, validloader, DEVICE)

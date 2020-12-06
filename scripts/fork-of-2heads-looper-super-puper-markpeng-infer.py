@@ -27,6 +27,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.decomposition import PCA
 from tensorflow.keras import layers, regularizers, Sequential, Model, backend, callbacks, optimizers, metrics, losses
 import tensorflow as tf
+import tensorflow.keras.backend as K
 import sys
 import os
 import random
@@ -302,6 +303,9 @@ for s in SEEDS:
 
         # Load final model
         m_nn.load_weights(f'{model_output_folder}/{file_name}_final.h5')
+        
+        trainable_count = np.sum([K.count_params(w) for w in m_nn.trainable_weights])
+        print(f"Model Size: {trainable_count:,} trainable parameters")
 
         # Generate Submission Prediction #
         fold_submit_preds = m_nn.predict([X_test_1, X_test_2],
