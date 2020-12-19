@@ -4,25 +4,6 @@
 # In[4]:
 
 
-"""
-[V1]
-* resnest50_fast_2s2x40d
-* Add Max./Min. Channels
-
-[V2]
-* resnest50_fast_2s2x40d
-* final_drop = 0.2
-* dropblock_prob = 0.0
-
-[TODO]
-* Separate gene expression, cell vaibility and other features
-* PCGrad (Project Conflicting Gradients)
-* Tuning resolution and image size
-
-ResNeSt:
-https://github.com/zhanghang1989/ResNeSt
-"""
-
 kernel_mode = False
 training_mode = True
 
@@ -33,6 +14,21 @@ if kernel_mode:
     sys.path.insert(0, "../input/resnest")
     sys.path.insert(0, "../input/pytorch-optimizer")
     sys.path.insert(0, "../input/pytorch-ranger")
+
+import argparse
+model_artifact_name = "deepinsight-resnest-v2"
+parser = argparse.ArgumentParser(description='Training DeepInsight ResNeSt V2')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=128,
+                    help='Batch size for training')
+parser.add_argument('--infer-batch-size', type=int, default=256,
+                    help='Batch size for inference')
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
 import os
 import numpy as np
@@ -118,8 +114,8 @@ if kernel_mode:
     dataset_folder = "../input/lish-moa"
     model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-resnest-v2-resnest50-output/{experiment_name}"
 else:
-    dataset_folder = "/workspace/Kaggle/MoA"
-    model_output_folder = f"{dataset_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_ResNeSt_v2_resnest50/{experiment_name}"
+    dataset_folder = input_folder
+    model_output_folder = f"{output_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_ResNeSt_v2_resnest50/{experiment_name}"
 
 if training_mode:
     os.makedirs(model_output_folder, exist_ok=True)
@@ -153,26 +149,10 @@ T_0 = 5  # epochs
 accumulate_grad_batches = 1
 gradient_clip_val = 10.0
 
-if "resnest50" in model_type:
-    batch_size = 128
-    infer_batch_size = 256 if not kernel_mode else 256
-    image_size = 224
-    resolution = 224
-elif model_type == "resnest101":
-    batch_size = 48
-    infer_batch_size = 96
-    image_size = 256
-    resolution = 256
-elif model_type == "resnest200":
-    batch_size = 12
-    infer_batch_size = 24
-    image_size = 320
-    resolution = 320
-elif model_type == "resnest269":
-    batch_size = 4
-    infer_batch_size = 8
-    image_size = 416
-    resolution = 416
+batch_size = args.batch_size
+infer_batch_size = args.infer_batch_size if not kernel_mode else 256
+image_size = 224
+resolution = 224
 
 # Prediction Clipping Thresholds
 prob_min = 0.001
@@ -1476,34 +1456,6 @@ if training_mode and best_model is not None:
     del best_model
     torch.cuda.empty_cache()
     gc.collect()
-
-
-# ## Submission
-
-# In[30]:
-
-
-print(kfold_submit_preds.shape)
-
-submission = pd.DataFrame(data=test_features["sig_id"].values,
-                          columns=["sig_id"])
-submission = submission.reindex(columns=["sig_id"] + train_classes)
-submission[train_classes] = kfold_submit_preds
-# Set control type to 0 as control perturbations have no MoAs
-submission.loc[test_features['cp_type'] == 0, submission.columns[1:]] = 0
-# submission.to_csv('submission.csv', index=False)
-submission.to_csv('submission_resnest_v2.csv', index=False)
-
-
-# In[31]:
-
-
-submission
-
-
-# In[ ]:
-
-
 
 
 
