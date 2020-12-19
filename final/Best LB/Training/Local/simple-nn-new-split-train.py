@@ -5,12 +5,26 @@
 
 
 import sys
-sys.path.append('../input/iterativestratification')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
+import argparse
+model_artifact_name = "simple-nn-new-cv"
+parser = argparse.ArgumentParser(description='Training SimpleNN New CV')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=256,
+                    help='Batch size')
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
-# In[ ]:
+import os
+os.makedirs(f'{output_folder}/model', exist_ok=True)
+os.makedirs(f'{output_folder}/interim', exist_ok=True)
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import numpy as np
 import random
@@ -20,8 +34,6 @@ import os
 import copy
 import seaborn as sns
 
-get_ipython().run_line_magic('mkdir', 'model')
-get_ipython().run_line_magic('mkdir', 'interim')
 from sklearn import preprocessing
 from sklearn.metrics import log_loss
 from sklearn.preprocessing import StandardScaler
@@ -48,25 +60,17 @@ from sklearn.preprocessing import QuantileTransformer
 NB = '25'
 
 IS_TRAIN = True
-MODEL_DIR = "model" # "../model"
-INT_DIR = "interim" # "../interim"
+MODEL_DIR = f"{output_folder}/model" # "../model"
+INT_DIR = f"{output_folder}/interim" # "../interim"
 
 
-# In[ ]:
+train_features = pd.read_csv(f'{input_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{input_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{input_folder}/train_targets_nonscored.csv')
+train_drugs = pd.read_csv(f'{input_folder}/train_drug.csv')
+test_features = pd.read_csv(f'{input_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{input_folder}/sample_submission.csv')
 
-
-os.listdir('../input/lish-moa')
-
-
-# In[ ]:
-
-
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
-train_drugs = pd.read_csv('../input/lish-moa/train_drug.csv')
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
 train_features = train_drugs.merge(train_features,on='sig_id',how='left')
 
 
@@ -528,7 +532,7 @@ len(feature_cols)
 
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 25
-BATCH_SIZE = 128
+BATCH_SIZE = args.batch_size
 LEARNING_RATE = 5e-3
 WEIGHT_DECAY = 1e-5
 NFOLDS = 5            #<-- Update
@@ -597,7 +601,7 @@ def run_training(fold, seed):
             
             best_loss = valid_loss
             oof[val_idx] = valid_preds
-            torch.save(model.state_dict(), f"model/{NB}-scored2-SEED{seed}-FOLD{fold}_.pth")
+            torch.save(model.state_dict(), f"{output_folder}/model/{NB}-scored2-SEED{seed}-FOLD{fold}_.pth")
         
         elif(EARLY_STOP == True):
             
@@ -618,7 +622,7 @@ def run_training(fold, seed):
 
     )
     
-    model.load_state_dict(torch.load(f"model/{NB}-scored2-SEED{seed}-FOLD{fold}_.pth"))
+    model.load_state_dict(torch.load(f"{output_folder}/model/{NB}-scored2-SEED{seed}-FOLD{fold}_.pth"))
     model.to(DEVICE)
        
     
@@ -691,23 +695,5 @@ for i in range(len(target_cols)):
     
 print("CV log_loss: ", score)
     
-
-
-# In[ ]:
-
-
-sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission.csv', index=False)
-
-
-# In[ ]:
-
-
-sub.shape
-
-
-# In[ ]:
-
-
 
 

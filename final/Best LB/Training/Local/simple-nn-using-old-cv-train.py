@@ -5,12 +5,23 @@
 
 
 import sys
-sys.path.append('../input/iterativestratification')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
+import argparse
+model_artifact_name = "simple-nn-old-cv"
+parser = argparse.ArgumentParser(description='Training SimpleNN Old CV')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=256,
+                    help='Batch size')
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
-# In[ ]:
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import numpy as np
 import random
@@ -40,21 +51,16 @@ warnings.filterwarnings('ignore')
 from sklearn.preprocessing import QuantileTransformer
 
 
-# In[ ]:
-
-
-os.listdir('../input/lish-moa')
-
 
 # In[ ]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{input_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{input_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{input_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{input_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{input_folder}/sample_submission.csv')
 
 
 # In[ ]:
@@ -82,9 +88,9 @@ for col in (GENES + CELLS):
     if IS_TRAIN:
         transformer = QuantileTransformer(n_quantiles=100, random_state=0, output_distribution="normal")
         transformer.fit(raw_vec)
-        pd.to_pickle(transformer, f'{col}_quantile_transformer.pkl')
+        pd.to_pickle(transformer, f'{output_folder}/{col}_quantile_transformer.pkl')
     else:
-        transformer = pd.read_pickle(f'{col}_quantile_transformer.pkl')        
+        transformer = pd.read_pickle(f'{output_folder}/{col}_quantile_transformer.pkl')        
 
 
     train_features[col] = transformer.transform(raw_vec).reshape(1, vec_len)[0]
@@ -114,9 +120,9 @@ n_comp = 90  #<--Update
 data = pd.concat([pd.DataFrame(train_features[GENES]), pd.DataFrame(test_features[GENES])])
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp, random_state=1903).fit(data[GENES])
-    pd.to_pickle(fa, f'factor_analysis_g.pkl')
+    pd.to_pickle(fa, f'{output_folder}/factor_analysis_g.pkl')
 else:
-    fa = pd.read_pickle(f'factor_analysis_g.pkl')
+    fa = pd.read_pickle(f'{output_folder}/factor_analysis_g.pkl')
 data2 = fa.transform(data[GENES])
 train2 = data2[:train_features.shape[0]]; test2 = data2[-test_features.shape[0]:]
 
@@ -136,9 +142,9 @@ n_comp = 50  #<--Update
 data = pd.concat([pd.DataFrame(train_features[CELLS]), pd.DataFrame(test_features[CELLS])])
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp, random_state=1903).fit(data[CELLS])
-    pd.to_pickle(fa, f'factor_analysis_c.pkl')
+    pd.to_pickle(fa, f'{output_folder}/factor_analysis_c.pkl')
 else:
-    fa = pd.read_pickle(f'factor_analysis_c.pkl')
+    fa = pd.read_pickle(f'{output_folder}/factor_analysis_c.pkl')
 data2 = fa.transform(data[CELLS])
 train2 = data2[:train_features.shape[0]]; test2 = data2[-test_features.shape[0]:]
 
@@ -168,9 +174,9 @@ data = train_features.append(test_features)
 if IS_TRAIN:
     transformer = QuantileTransformer(n_quantiles=100, random_state=123, output_distribution="normal")
     transformer.fit(data.iloc[:,5:])
-    pd.to_pickle(transformer, f'{col}_quantile_transformer2.pkl')
+    pd.to_pickle(transformer, f'{output_folder}/col}_quantile_transformer2.pkl')
 else:
-    transformer = pd.read_pickle(f'{col}_quantile_transformer2.pkl')  
+    transformer = pd.read_pickle(f'{output_folder}/{col}_quantile_transformer2.pkl')  
 data_transformed = transformer.transform(data.iloc[:, 5:])
 
 train_features_transformed = data_transformed[ : train_features.shape[0]]
@@ -521,7 +527,7 @@ len(feature_cols)
 
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 25
-BATCH_SIZE = 128
+BATCH_SIZE = args.batch_size
 LEARNING_RATE = 5e-3
 WEIGHT_DECAY = 1e-5
 NFOLDS = 5            #<-- Update
@@ -590,7 +596,7 @@ def run_training(fold, seed):
             
             best_loss = valid_loss
             oof[val_idx] = valid_preds
-            torch.save(model.state_dict(), f"SEED{seed}_FOLD{fold}_.pth")
+            torch.save(model.state_dict(), f"{output_folder}/{seed}_FOLD{fold}_.pth")
         
         elif(EARLY_STOP == True):
             
@@ -611,7 +617,7 @@ def run_training(fold, seed):
 
     )
     
-    model.load_state_dict(torch.load(f"SEED{seed}_FOLD{fold}_.pth"))
+    model.load_state_dict(torch.load(f"{output_folder}/SEED{seed}_FOLD{fold}_.pth"))
     model.to(DEVICE)
     
     predictions = np.zeros((len(test_), target.iloc[:, 1:].shape[1]))
@@ -682,24 +688,5 @@ for i in range(len(target_cols)):
     score += score_ / target.shape[1]
     
 print("CV log_loss: ", score)
-    
-
-
-# In[ ]:
-
-
-sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission.csv', index=False)
-
-
-# In[ ]:
-
-
-sub.shape
-
-
-# In[ ]:
-
-
 
 
