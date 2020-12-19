@@ -3,16 +3,31 @@
 
 # In[1]:
 
-kernel_mode = True
+kernel_mode = False
 
 import sys
 if kernel_mode:
     sys.path.append('../input/iterative-stratification/')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
+import argparse
+model_artifact_name = "simple-nn-old-cv"
+parser = argparse.ArgumentParser(description='Inferencing SimpleNN Old CV')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('model', metavar='MODEL',
+                    help='Model folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=2048,
+                    help='Batch size')
+args = parser.parse_args()
+input_folder = args.input
+model_folder = args.model
+output_folder = args.output
 
-# In[2]:
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import numpy as np
 import random
@@ -45,10 +60,10 @@ from sklearn.preprocessing import QuantileTransformer
 # In[4]:
 
 
-dataset_folder = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
+dataset_folder = "../input/lish-moa" if kernel_mode else input_folder
 model_output_folder = "../input/simple-nn-using-old-cv" if kernel_mode \
-    else f"{dataset_folder}/simple-nn-using-old-cv-markpeng"
-BATCH_SIZE = 2048
+    else model_folder
+BATCH_SIZE = args.batch_size
 
 if kernel_mode:
     os.listdir(dataset_folder)
@@ -92,7 +107,7 @@ for col in (GENES + CELLS):
         transformer = QuantileTransformer(
             n_quantiles=100, random_state=0, output_distribution="normal")
         transformer.fit(raw_vec)
-        pd.to_pickle(transformer, f'{col}_quantile_transformer.pkl')
+        pd.to_pickle(transformer, f'{model_output_folder}/{col}_quantile_transformer.pkl')
     else:
         transformer = pd.read_pickle(f'{model_output_folder}/{col}_quantile_transformer.pkl')
 
@@ -126,7 +141,7 @@ data = pd.concat([pd.DataFrame(train_features[GENES]),
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp,
                         random_state=1903).fit(data[GENES])
-    pd.to_pickle(fa, f'factor_analysis_g.pkl')
+    pd.to_pickle(fa, f'{model_output_folder}/factor_analysis_g.pkl')
 else:
     fa = pd.read_pickle(f'{model_output_folder}/factor_analysis_g.pkl')
 data2 = fa.transform(data[GENES])
@@ -151,7 +166,7 @@ data = pd.concat([pd.DataFrame(train_features[CELLS]),
 if IS_TRAIN:
     fa = FactorAnalysis(n_components=n_comp,
                         random_state=1903).fit(data[CELLS])
-    pd.to_pickle(fa, f'factor_analysis_c.pkl')
+    pd.to_pickle(fa, f'{model_output_folder}/factor_analysis_c.pkl')
 else:
     fa = pd.read_pickle(f'{model_output_folder}/factor_analysis_c.pkl')
 data2 = fa.transform(data[CELLS])
@@ -185,7 +200,7 @@ if IS_TRAIN:
     transformer = QuantileTransformer(
         n_quantiles=100, random_state=123, output_distribution="normal")
     transformer.fit(data.iloc[:, 5:])
-    pd.to_pickle(transformer, f'{col}_quantile_transformer2.pkl')
+    pd.to_pickle(transformer, f'{model_output_folder}/{col}_quantile_transformer2.pkl')
 else:
     transformer = pd.read_pickle(f'{model_output_folder}/{col}_quantile_transformer2.pkl')
 data_transformed = transformer.transform(data.iloc[:, 5:])
@@ -703,7 +718,7 @@ print("CV log_loss: ", score)
 sub = sample_submission.drop(columns=target_cols).merge(
     test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
 # sub.to_csv('submission.csv', index=False)
-sub.to_csv('submission_script_simpleNN_oldcv_0.01836.csv', index=False)
+sub.to_csv(f'{output_folder}/submission_simpleNN_oldcv_0.01836.csv', index=False)
 
 
 # In[39]:
