@@ -7,15 +7,26 @@
 # Reference:
 # https://www.kaggle.com/demetrypascal/fork-of-2heads-looper-super-puper-plate/notebook
 
-kernel_mode = True
+kernel_mode = False
 
+import argparse
+model_artifact_name = "2heads-resnet"
+parser = argparse.ArgumentParser(description='Inferencing 2-heads ResNet')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('model', metavar='MODEL',
+                    help='Model folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=2048,
+                    help='Batch size')
+args = parser.parse_args()
+input_folder = args.input
+model_folder = args.model
+output_folder = args.output
 
-# # Preparations
-
-# Let’s load the packages and provide some constants for our script:
-
-# In[2]:
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import numpy as np
 import pandas as pd
@@ -44,16 +55,16 @@ warnings.filterwarnings('ignore')
 # In[3]:
 
 
-PATH = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
-model_output_folder = "../input/2heads-looper-super-puper-markpeng" if kernel_mode     else f"{PATH}/2heads-looper-super-puper"
+PATH = "../input/lish-moa" if kernel_mode else input_folder
+model_output_folder = "../input/2heads-looper-super-puper-markpeng" if kernel_mode \
+    else model_folder
 os.makedirs(model_output_folder, exist_ok=True)
 
 # SEEDS = [23]
 SEEDS = [23, 228, 1488, 1998, 2208, 2077, 404]
 KFOLDS = 10
 
-batch_size = 256
-# batch_size = 128
+batch_size = args.batch_size
 
 label_smoothing_alpha = 0.0005
 
@@ -100,7 +111,8 @@ sub.iloc[:, 1:] = 0
 
 
 # Import predictors from public kernel
-json_file_path = '../input/t-test-pca-rfe-logistic-regression/main_predictors.json' if kernel_mode     else "/workspace/Kaggle/MoA/t-test-pca-rfe-logistic-regression/main_predictors.json"
+json_file_path = f'{PATH}/t-test-pca-rfe-logistic-regression/main_predictors.json' if kernel_mode \
+    else f"{PATH}/main_predictors.json"
 
 with open(json_file_path, 'r') as j:
     predictors = json.loads(j.read())
@@ -349,7 +361,7 @@ sub
 sub.iloc[test_features['cp_type'] == 'ctl_vehicle', 1:] = 0
 
 # Save Submission
-sub.to_csv('submission_2heads-looper-super-puper_0.01836.csv', index=False)
+sub.to_csv(f'{output_folder}/submission_2heads_resnet_0.01836.csv', index=False)
 # sub.to_csv('submission.csv', index=False)
 
 

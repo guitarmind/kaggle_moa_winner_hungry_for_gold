@@ -7,15 +7,23 @@
 # Reference:
 # https://www.kaggle.com/demetrypascal/fork-of-2heads-looper-super-puper-plate/notebook
 
-kernel_mode = True
+kernel_mode = False
 
+import argparse
+model_artifact_name = "2heads-resnet"
+parser = argparse.ArgumentParser(description='Training 2-heads ResNet')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=128,
+                    help='Batch size')
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
-# # Preparations
-
-# Let’s load the packages and provide some constants for our script:
-
-# In[2]:
-
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import numpy as np
 import pandas as pd
@@ -31,7 +39,6 @@ import sys
 import os
 import random
 import json
-sys.path.append('../input/iterative-stratification')
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 import pickle
 from pickle import dump, load
@@ -44,8 +51,8 @@ warnings.filterwarnings('ignore')
 # In[3]:
 
 
-PATH = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
-model_output_folder = "." if kernel_mode else f"{PATH}/2heads-looper-super-puper"
+PATH = "../input/lish-moa" if kernel_mode else input_folder
+model_output_folder = "." if kernel_mode else output_folder
 os.makedirs(model_output_folder, exist_ok=True)
 
 # SEEDS = [23]
@@ -97,7 +104,8 @@ sub.iloc[:, 1:] = 0
 
 
 # Import predictors from public kernel
-json_file_path = '../input/t-test-pca-rfe-logistic-regression/main_predictors.json' if kernel_mode     else "/workspace/Kaggle/MoA/t-test-pca-rfe-logistic-regression/main_predictors.json"
+json_file_path = f'{PATH}/t-test-pca-rfe-logistic-regression/main_predictors.json' if kernel_mode \
+    else f"{PATH}/main_predictors.json"
 
 with open(json_file_path, 'r') as j:
     predictors = json.loads(j.read())
@@ -347,7 +355,7 @@ for s in SEEDS:
         history = m_nn.fit([X_train_1, X_train_2],
                            y_train_2,
                            epochs=50,
-                           batch_size=128,
+                           batch_size=args.batch_size,
                            validation_data=([X_valid_1, X_valid_2], y_valid_2),
                            callbacks=[check_point, early_stopping, reduce_lr],
                            verbose=0)
@@ -392,7 +400,7 @@ for s in SEEDS:
         history = m_nn.fit([X_train_1, X_train_2],
                            y_train_1,
                            epochs=50,
-                           batch_size=128,
+                           batch_size=args.batch_size,
                            validation_data=([X_valid_1, X_valid_2], y_valid_1),
                            callbacks=[check_point, early_stopping, reduce_lr],
                            verbose=0)
@@ -437,7 +445,7 @@ for s in SEEDS:
                 history = m_nn.fit([X_valid_1, X_valid_2],
                                    y_valid_1,
                                    epochs=1,
-                                   batch_size=128,
+                                   batch_size=args.batch_size,
                                    verbose=0)
 
                 # val_preds = m_nn.predict([X_valid_1, X_valid_2])
@@ -487,7 +495,7 @@ for s in SEEDS:
                 history = m_nn.fit([X_valid_1, X_valid_2],
                                    y_valid_1,
                                    epochs=1,
-                                   batch_size=128,
+                                   batch_size=args.batch_size,
                                    verbose=0)
 
                 # val_preds = m_nn.predict([X_valid_1, X_valid_2])
@@ -558,41 +566,6 @@ with open(f'{model_output_folder}/oof_{oof_loss}.npy', 'wb') as f:
 with open(f'{model_output_folder}/oof_{oof_loss}.npy', 'rb') as f:
     tmp = np.load(f)
     print(tmp.shape)
-
-
-# # Submission
-
-# In[16]:
-
-
-sub.iloc[:, 1:] = y_pred
-# sub.iloc[:, 1:] = np.clip(y_pred, P_MIN, P_MAX)
-
-
-# In[17]:
-
-
-sub
-
-
-# In[18]:
-
-
-# Set ctl_vehicle to 0
-sub.iloc[test_features['cp_type'] == 'ctl_vehicle', 1:] = 0
-
-# Save Submission
-sub.to_csv('submission_2heads-looper-super-puper.csv', index=False)
-sub.to_csv('submission.csv', index=False)
-
-
-# In[19]:
-
-
-sub
-
-
-# In[ ]:
 
 
 
