@@ -6,13 +6,22 @@
 
 import sys
 
-# for kaggle kernel
-# add datasets iterative-stratification and umaplearn
+import argparse
+model_artifact_name = "2-stage-nn-tabnet"
+parser = argparse.ArgumentParser(description='Training 2-Stage NN+TabNet')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=256,
+                    help='Batch size')
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
-sys.path.append('../input/iterative-stratification')
-sys.path.append('../input/umaplearn/umap')
-get_ipython().run_line_magic('mkdir', 'model')
-get_ipython().run_line_magic('mkdir', 'interim')
+import os
+os.makedirs(f'{output_folder}/model', exist_ok=True)
+os.makedirs(f'{output_folder}/interim', exist_ok=True)
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
@@ -69,8 +78,8 @@ NB = '101'
 
 IS_TRAIN = True
 
-MODEL_DIR = "model" # "../model"
-INT_DIR = "interim" # "../interim"
+MODEL_DIR = f"{output_folder}/model" # "../model"
+INT_DIR = f"{output_folder}/interim" # "../interim"
 
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -86,12 +95,12 @@ SMAX = 1.0
 # In[ ]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{input_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{input_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{input_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{input_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{input_folder}/sample_submission.csv')
 
 
 # In[ ]:
@@ -258,7 +267,7 @@ HIDDEN_SIZE = 2048
 
 # training hyper params
 EPOCHS = 15
-BATCH_SIZE = 256
+BATCH_SIZE = args.batch_size
 NFOLDS = 10 # 10
 NREPEATS = 1
 NSEEDS = 5 # 5
@@ -519,12 +528,12 @@ def run_seeds(train, test, feature_cols, target_cols, nfolds=NFOLDS, nseed=NSEED
 # In[ ]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{input_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{input_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{input_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{input_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{input_folder}/sample_submission.csv')
 
 
 # In[ ]:
@@ -605,9 +614,6 @@ print("CV log_loss: ", score)
 # In[ ]:
 
 
-get_ipython().system('pip install --no-index --find-links /kaggle/input/pytorchtabnet/pytorch_tabnet-2.0.0-py3-none-any.whl pytorch-tabnet')
-
-
 # In[ ]:
 
 
@@ -676,12 +682,12 @@ MAX_LR = 1e-2
 # In[ ]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{input_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{input_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{input_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{input_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{input_folder}/sample_submission.csv')
 
 
 # In[ ]:
@@ -1151,25 +1157,9 @@ for i in range(len(target_cols)):
 print("CV log_loss: ", score)
 
 
-# In[ ]:
-
-
-sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission.csv', index=False)
-
-
-# In[ ]:
-
-
-sub
-
-
-# In[ ]:
-
-
-for root, dirs, files in os.walk("model/"):
+for root, dirs, files in os.walk(f"{MODEL_DIR}/"):
     for f in files:
         if f[-3:] == "zip":
             print(f)
-            os.rename("model/" + f, "model/" + f[:-3]+"model")
+            os.rename(f"{MODEL_DIR}/" + f, f"{MODEL_DIR}/" + f[:-3]+"model")
 

@@ -13,6 +13,8 @@ parser.add_argument('input', metavar='INPUT',
                     help='Input folder', default=".")
 parser.add_argument('output', metavar='OUTPUT',
                     help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=256,
+                    help='Batch size')
 args = parser.parse_args()
 input_folder = args.input
 output_folder = args.output
@@ -61,12 +63,12 @@ NB = '25'
 
 IS_TRAIN = True
 MODEL_DIR = f"{output_folder}/model" # "../model"
-INT_DIR = f"{output_folder}interim" # "../interim"
+INT_DIR = f"{output_folder}/interim" # "../interim"
 
 NSEEDS = 5  # 5
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
 EPOCHS = 15
-BATCH_SIZE = 256
+BATCH_SIZE = args.batch_size
 LEARNING_RATE = 5e-3
 WEIGHT_DECAY = 1e-5
 EARLY_STOPPING_STEPS = 10
