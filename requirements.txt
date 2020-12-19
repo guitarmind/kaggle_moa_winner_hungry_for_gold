@@ -1,0 +1,10 @@
+iterative-stratification==0.1.6
+geffnet
+git+https://github.com/zhanghang1989/ResNeSt
+optuna
+pytorch-lightning==1.0.2
+git+https://github.com/dreamquark-ai/tabnet.git
+umap-learn==0.4.6
+pytorch-optimizer==0.0.1a17
+pytorch-ranger==0.1.1
+
