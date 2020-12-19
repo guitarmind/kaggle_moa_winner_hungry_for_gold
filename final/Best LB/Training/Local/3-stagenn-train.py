@@ -5,12 +5,21 @@
 
 
 import sys
-sys.path.append('../input/iterative-stratification')
-sys.path.append('../input/umaplearn/umap')
+
+import argparse
+model_artifact_name = "3-stage-nn"
+parser = argparse.ArgumentParser(description='Training 3-Stage NN')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
 import os
-os.makedirs('model', exist_ok=True)
-os.makedirs('interim', exist_ok=True)
+os.makedirs(f'{output_folder}/model', exist_ok=True)
+os.makedirs(f'{output_folder}/interim', exist_ok=True)
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
@@ -51,8 +60,8 @@ torch.__version__
 NB = '25'
 
 IS_TRAIN = True
-MODEL_DIR = "model" # "../model"
-INT_DIR = "interim" # "../interim"
+MODEL_DIR = f"{output_folder}/model" # "../model"
+INT_DIR = f"{output_folder}interim" # "../interim"
 
 NSEEDS = 5  # 5
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -74,12 +83,12 @@ SMAX = 1.0
 # In[ ]:
 
 
-train_features = pd.read_csv('../input/lish-moa/train_features.csv')
-train_targets_scored = pd.read_csv('../input/lish-moa/train_targets_scored.csv')
-train_targets_nonscored = pd.read_csv('../input/lish-moa/train_targets_nonscored.csv')
+train_features = pd.read_csv(f'{input_folder}/train_features.csv')
+train_targets_scored = pd.read_csv(f'{input_folder}/train_targets_scored.csv')
+train_targets_nonscored = pd.read_csv(f'{input_folder}/train_targets_nonscored.csv')
 
-test_features = pd.read_csv('../input/lish-moa/test_features.csv')
-sample_submission = pd.read_csv('../input/lish-moa/sample_submission.csv')
+test_features = pd.read_csv(f'{input_folder}/test_features.csv')
+sample_submission = pd.read_csv(f'{input_folder}/sample_submission.csv')
 
 
 # In[ ]:
@@ -1196,12 +1205,4 @@ for i in range(len(target_cols)):
     
 print("CV log_loss: ", score)
 
-
-# In[ ]:
-
-
-
-
-sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission_kibuna_nn.csv', index=False)
 

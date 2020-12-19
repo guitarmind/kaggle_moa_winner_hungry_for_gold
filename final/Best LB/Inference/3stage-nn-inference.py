@@ -8,14 +8,22 @@
 
 import sys
 
+import argparse
+model_artifact_name = "3-stage-nn"
+parser = argparse.ArgumentParser(description='Inferencing 3-Stage NN')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
+
 import os
-os.makedirs('model', exist_ok=True)
-os.makedirs('interim', exist_ok=True)
+os.makedirs(f'{output_folder}/model', exist_ok=True)
+os.makedirs(f'{output_folder}/interim', exist_ok=True)
 
 BATCH_SIZE = 2048
-
-# get_ipython().run_line_magic('mkdir', 'model')
-# get_ipython().run_line_magic('mkdir', 'interim')
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
@@ -55,8 +63,8 @@ torch.__version__
 NB = '25'
 
 IS_TRAIN = False
-MODEL_DIR = "../input/kibuna-nn-hs-1024-last-train/model" # "../model"
-INT_DIR = "interim" # "../interim"
+MODEL_DIR = f"{output_folder}/model" # "../model"
+INT_DIR = f"{output_folder}interim" # "../interim"
 
 NSEEDS = 5  # 5
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
@@ -1242,7 +1250,7 @@ print("CV log_loss: ", score)
 
 
 sub = sample_submission.drop(columns=target_cols).merge(test[['sig_id']+target_cols], on='sig_id', how='left').fillna(0)
-sub.to_csv('submission_2stageNN_with_ns_oldcv_0.01822.csv', index=False)
+sub.to_csv(f'{output_folder}/submission_3stage-nn_0.01822.csv', index=False)
 
 
 # In[83]:
