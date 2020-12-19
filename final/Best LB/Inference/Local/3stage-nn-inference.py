@@ -28,6 +28,8 @@ import os
 os.makedirs(f'{model_folder}/model', exist_ok=True)
 os.makedirs(f'{model_folder}/interim', exist_ok=True)
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 BATCH_SIZE = args.batch_size
 
 from scipy.sparse.csgraph import connected_components
