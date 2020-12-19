@@ -20,6 +20,8 @@ model_artifact_name = "deepinsight-efficientnet-v7-b3"
 parser = argparse.ArgumentParser(description='Inferencing DeepInsight EfficientNet B3 NS')
 parser.add_argument('input', metavar='INPUT',
                     help='Input folder', default=".")
+parser.add_argument('model', metavar='MODEL',
+                    help='Model folder', default=".")
 parser.add_argument('output', metavar='OUTPUT',
                     help='Output folder', default=".")
 parser.add_argument('--batch-size', type=int, default=48,
@@ -28,6 +30,7 @@ parser.add_argument('--infer-batch-size', type=int, default=96,
                     help='Batch size for inference')
 args = parser.parse_args()
 input_folder = args.input
+model_folder = args.model
 output_folder = args.output
 
 import os
@@ -114,7 +117,7 @@ if kernel_mode:
     model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-efficientnet-v7-b3/{experiment_name}"
 else:
     dataset_folder = input_folder
-    model_output_folder = f"{output_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_efficientnet_v7_b3/{experiment_name}"
+    model_output_folder = f"{model_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_efficientnet_v7_b3/{experiment_name}"
 
 if training_mode:
     os.makedirs(model_output_folder, exist_ok=True)

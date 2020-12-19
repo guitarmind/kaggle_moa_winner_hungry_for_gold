@@ -10,20 +10,23 @@ import sys
 
 import argparse
 model_artifact_name = "2-stage-nn-tabnet"
-parser = argparse.ArgumentParser(description='Training 2-Stage NN+TabNet')
+parser = argparse.ArgumentParser(description='Inferencing 2-Stage NN+TabNet')
 parser.add_argument('input', metavar='INPUT',
                     help='Input folder', default=".")
+parser.add_argument('model', metavar='MODEL',
+                    help='Model folder', default=".")
 parser.add_argument('output', metavar='OUTPUT',
                     help='Output folder', default=".")
-parser.add_argument('--batch-size', type=int, default=256,
+parser.add_argument('--batch-size', type=int, default=2048,
                     help='Batch size')
 args = parser.parse_args()
 input_folder = args.input
+model_folder = args.model
 output_folder = args.output
 
 import os
-os.makedirs(f'{output_folder}/model', exist_ok=True)
-os.makedirs(f'{output_folder}/interim', exist_ok=True)
+os.makedirs(f'{model_folder}/model', exist_ok=True)
+os.makedirs(f'{model_folder}/interim', exist_ok=True)
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
@@ -80,8 +83,8 @@ NB = '101'
 
 IS_TRAIN = False ################################################################
 
-MODEL_DIR = f"{output_folder}/model" # "../model"
-INT_DIR = f"{output_folder}/interim" # "../interim"
+MODEL_DIR = f"{model_folder}/model" # "../model"
+INT_DIR = f"{model_folder}/interim" # "../interim"
 
 DEVICE = ('cuda' if torch.cuda.is_available() else 'cpu')
 
