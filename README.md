@@ -4,7 +4,7 @@ This documentation outlines how to reproduce the 1st place solution by the ***Hu
 
 [Winning Solution Writeup in PDF](moa_hungry_for_gold_winning_solution_writeup.pdf)
 
-[How to Reproduce Winning Solution Locally](final/Best LB/how_to_reproduce_locally.md)
+[How to Reproduce Winning Solution Locally](final/Best%20LB/how_to_reproduce_locally.md)
 
 ## Archive Contents
 
