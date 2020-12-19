@@ -1,0 +1,599 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+# Reference:
+# https://www.kaggle.com/demetrypascal/fork-of-2heads-looper-super-puper-plate/notebook
+
+kernel_mode = True
+
+
+# # Preparations
+
+# Let’s load the packages and provide some constants for our script:
+
+# In[2]:
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from sklearn import preprocessing
+from sklearn.metrics import confusion_matrix
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.decomposition import PCA
+from tensorflow.keras import layers, regularizers, Sequential, Model, backend, callbacks, optimizers, metrics, losses
+import tensorflow as tf
+import sys
+import os
+import random
+import json
+sys.path.append('../input/iterative-stratification')
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+import pickle
+from pickle import dump, load
+import glob
+
+import warnings
+warnings.filterwarnings('ignore')
+
+
+# In[3]:
+
+
+PATH = "../input/lish-moa" if kernel_mode else "/workspace/Kaggle/MoA"
+model_output_folder = "." if kernel_mode else f"{PATH}/2heads-looper-super-puper"
+os.makedirs(model_output_folder, exist_ok=True)
+
+# SEEDS = [23]
+SEEDS = [23, 228, 1488, 1998, 2208, 2077, 404]
+KFOLDS = 10
+
+label_smoothing_alpha = 0.0005
+
+P_MIN = label_smoothing_alpha
+P_MAX = 1 - P_MIN
+
+
+# In[4]:
+
+
+# Import train data, drop sig_id, cp_type
+train_features = pd.read_csv(f'{PATH}/train_features.csv')
+
+non_ctl_idx = train_features.loc[
+    train_features['cp_type'] != 'ctl_vehicle'].index.to_list()
+
+# Drop training data with ctl vehicle
+tr = train_features.iloc[non_ctl_idx, :].reset_index(drop=True)
+
+test_features = pd.read_csv(f'{PATH}/test_features.csv')
+te = test_features.copy()
+
+
+# In[5]:
+
+
+train_targets_scored = pd.read_csv(f'{PATH}/train_targets_scored.csv')
+Y = train_targets_scored.drop('sig_id', axis=1)
+Y = Y.iloc[non_ctl_idx, :].copy().reset_index(drop=True).values
+
+train_targets_nonscored = pd.read_csv(f'{PATH}/train_targets_nonscored.csv')
+Y0 = train_targets_nonscored.drop('sig_id', axis=1)
+Y0 = Y0.iloc[non_ctl_idx, :].copy().reset_index(drop=True).values
+
+sub = pd.read_csv(f'{PATH}/sample_submission.csv')
+sub.iloc[:, 1:] = 0
+
+
+# # Features from t.test
+
+# Here I am getting most important predictors
+
+# In[6]:
+
+
+# Import predictors from public kernel
+json_file_path = '../input/t-test-pca-rfe-logistic-regression/main_predictors.json' if kernel_mode     else "/workspace/Kaggle/MoA/t-test-pca-rfe-logistic-regression/main_predictors.json"
+
+with open(json_file_path, 'r') as j:
+    predictors = json.loads(j.read())
+    predictors = predictors['start_predictors']
+
+
+# In[7]:
+
+
+second_Xtrain = tr[predictors].copy().values
+
+second_Xtest = te[predictors].copy().values
+second_Xtrain.shape
+
+
+# # Keras model
+
+# I got idea of **label smoothing** from this notebook: https://www.kaggle.com/kailex/moa-transfer-recipe-with-smoothing
+
+# In[8]:
+
+
+def logloss(y_true, y_pred):
+    y_pred = tf.clip_by_value(y_pred, P_MIN, P_MAX)
+    return -backend.mean(y_true * backend.log(y_pred) +
+                         (1 - y_true) * backend.log(1 - y_pred))
+
+
+# # Training
+
+# In[9]:
+
+
+numeric_features = [c for c in train_features.columns if c != "sig_id"]
+gene_experssion_features = [c for c in numeric_features if c.startswith("g-")]
+cell_viability_features = [c for c in numeric_features if c.startswith("c-")]
+len(gene_experssion_features), len(cell_viability_features)
+
+
+# In[10]:
+
+
+tr = tr.drop(['sig_id', 'cp_type', 'cp_time', 'cp_dose'], axis=1)
+te = test_features.drop(['sig_id', 'cp_type', 'cp_time', 'cp_dose'], axis=1)
+
+
+# In[11]:
+
+
+def preprocessor_1(train, valid, test, seed):
+    n_gs = 2
+    n_cs = 100
+
+    # g-mean, c-mean
+    train_g_mean = train[gene_experssion_features].mean(axis=1)
+    valid_g_mean = valid[gene_experssion_features].mean(axis=1)
+    test_g_mean = test[gene_experssion_features].mean(axis=1)
+
+    train_c_mean = train[cell_viability_features].mean(axis=1)
+    valid_c_mean = valid[cell_viability_features].mean(axis=1)
+    test_c_mean = test[cell_viability_features].mean(axis=1)
+
+    train_columns = train.columns.tolist()
+    test_columns = test.columns.tolist()
+
+    train = np.concatenate(
+        (train, train_g_mean[:, np.newaxis], train_c_mean[:, np.newaxis]),
+        axis=1)
+    valid = np.concatenate(
+        (valid, valid_g_mean[:, np.newaxis], valid_c_mean[:, np.newaxis]),
+        axis=1)
+    test = np.concatenate(
+        (test, test_g_mean[:, np.newaxis], test_c_mean[:, np.newaxis]), axis=1)
+
+    # Standard Scaler for Numerical Values
+    scaler = preprocessing.StandardScaler()
+    train = pd.DataFrame(data=scaler.fit_transform(train),
+                         columns=train_columns + ["g_mean", "c_mean"])
+    valid = pd.DataFrame(data=scaler.transform(valid),
+                         columns=train_columns + ["g_mean", "c_mean"])
+    test = pd.DataFrame(data=scaler.transform(test),
+                        columns=test_columns + ["g_mean", "c_mean"])
+
+    pca_gs = PCA(n_components=n_gs, random_state=seed)
+    train_pca_gs = pca_gs.fit_transform(train[gene_experssion_features].values)
+    valid_pca_gs = pca_gs.transform(valid[gene_experssion_features].values)
+    test_pca_gs = pca_gs.transform(test[gene_experssion_features].values)
+
+    pca_cs = PCA(n_components=n_cs, random_state=seed)
+    train_pca_cs = pca_cs.fit_transform(train[cell_viability_features].values)
+    valid_pca_cs = pca_cs.transform(valid[cell_viability_features].values)
+    test_pca_cs = pca_cs.transform(test[cell_viability_features].values)
+
+    # Append Features
+    train = np.concatenate((train, train_pca_gs, train_pca_cs), axis=1)
+    valid = np.concatenate((valid, valid_pca_gs, valid_pca_cs), axis=1)
+    test = np.concatenate((test, test_pca_gs, test_pca_cs), axis=1)
+
+    return train, valid, test, scaler, pca_gs, pca_cs
+
+
+def preprocessor_2(train, valid, test):
+    # Standard Scaler for Numerical Values
+    scaler = preprocessing.StandardScaler()
+    train = scaler.fit_transform(train)
+    valid = scaler.transform(valid)
+    test = scaler.transform(test)
+
+    return train, valid, test, scaler
+
+
+def save_pickle(obj, model_output_folder, name):
+    dump(obj, open(f"{model_output_folder}/{name}.pkl", 'wb'),
+         pickle.HIGHEST_PROTOCOL)
+
+
+def load_pickle(model_output_folder, name):
+    return load(open(f"{model_output_folder}/{name}.pkl", 'rb'))
+
+
+def mean_logloss(y_pred, y_true):
+    logloss = (1 - y_true) * np.log(1 - y_pred +
+                                    1e-15) + y_true * np.log(y_pred + 1e-15)
+    return np.mean(-logloss)
+
+
+# In[12]:
+
+
+tr.shape, te.shape
+
+
+# In[13]:
+
+
+oof_predictions = np.zeros((tr.shape[0], Y.shape[1]))
+
+y_pred = np.zeros((te.shape[0], 206))
+for s in SEEDS:
+
+    random.seed(s)
+    np.random.seed(s)
+    tf.random.set_seed(s)
+
+    k = 0
+    kf = KFold(n_splits=KFOLDS, shuffle=True, random_state=s)
+    for train_index, valid_index in kf.split(tr):
+        file_name = f"seed{s}_fold{k}"
+
+        X_train_1, X_valid_1, X_test_1, scaler_1, pca_gs, pca_cs = preprocessor_1(
+            tr.iloc[train_index, :], tr.iloc[valid_index, :], te, s)
+        save_pickle(scaler_1, model_output_folder, f"{file_name}_scaler_1")
+        save_pickle(pca_gs, model_output_folder, f"{file_name}_pca_gs")
+        save_pickle(pca_cs, model_output_folder, f"{file_name}_pca_cs")
+
+        X_train_2, X_valid_2, X_test_2, scaler_2 = preprocessor_2(
+            second_Xtrain[train_index, :], second_Xtrain[valid_index, :],
+            second_Xtest)
+        save_pickle(scaler_2, model_output_folder, f"{file_name}_scaler_2")
+
+        y_train_1, y_valid_1 = Y[train_index, :], Y[valid_index, :]
+        y_train_2, y_valid_2 = Y0[train_index, :], Y0[valid_index, :]
+
+        n_features = X_train_1.shape[1]
+        n_features_2 = X_train_2.shape[1]
+
+        early_stopping = callbacks.EarlyStopping(min_delta=1e-5,
+                                                 monitor='val_loss',
+                                                 patience=10,
+                                                 verbose=0,
+                                                 mode='min',
+                                                 restore_best_weights=True)
+        check_point = callbacks.ModelCheckpoint(
+            f"{model_output_folder}/{file_name}_nonscore.h5",
+            save_best_only=True,
+            verbose=0,
+            mode="min")
+        reduce_lr = callbacks.ReduceLROnPlateau(factor=0.5,
+                                                patience=4,
+                                                verbose=0,
+                                                mode="auto")
+
+        # Model Definition #
+
+        input1_ = layers.Input(shape=(n_features, ))
+        input2_ = layers.Input(shape=(n_features_2, ))
+
+        output1 = Sequential([
+            layers.BatchNormalization(),
+            layers.Dropout(0.2),
+            layers.Dense(512, activation="elu"),
+            layers.BatchNormalization(),
+            layers.Dense(256, activation="elu")
+        ])(input1_)
+
+        answer1 = Sequential([
+            layers.BatchNormalization(),
+            layers.Dropout(0.3),
+            layers.Dense(512, "relu")
+        ])(layers.Concatenate()([output1, input2_]))
+
+        answer2 = Sequential([
+            layers.BatchNormalization(),
+            layers.Dense(512, "elu"),
+            layers.BatchNormalization(),
+            layers.Dense(256, "relu")
+        ])(layers.Concatenate()([output1, input2_, answer1]))
+
+        answer3 = Sequential(
+            [layers.BatchNormalization(),
+             layers.Dense(256,
+                          "elu")])(layers.Concatenate()([answer1, answer2]))
+
+        answer3_ = Sequential([
+            layers.BatchNormalization(),
+            layers.Dense(256, "relu")
+        ])(layers.Concatenate()([answer1, answer2, answer3]))
+
+        answer4 = Sequential([
+            layers.BatchNormalization(),
+            layers.Dense(
+                256,
+                kernel_initializer=tf.keras.initializers.lecun_normal(seed=s),
+                activation='selu',
+                name='last_frozen'),
+            layers.BatchNormalization(),
+            layers.Dense(
+                206,
+                kernel_initializer=tf.keras.initializers.lecun_normal(seed=s),
+                activation='selu')
+        ])(layers.Concatenate()([output1, answer2, answer3, answer3_]))
+
+        # Non-scored Training #
+
+        answer5 = Sequential([
+            layers.BatchNormalization(),
+            layers.Dense(Y0.shape[1], "sigmoid")
+        ])(answer4)
+
+        m_nn = tf.keras.Model([input1_, input2_], answer5)
+
+        m_nn.compile(optimizer=optimizers.Adam(learning_rate=0.001),
+                     loss=losses.BinaryCrossentropy(
+                         label_smoothing=label_smoothing_alpha),
+                     metrics=logloss)
+
+        history = m_nn.fit([X_train_1, X_train_2],
+                           y_train_2,
+                           epochs=50,
+                           batch_size=128,
+                           validation_data=([X_valid_1, X_valid_2], y_valid_2),
+                           callbacks=[check_point, early_stopping, reduce_lr],
+                           verbose=0)
+        m_nn = tf.keras.models.load_model(
+            f"{model_output_folder}/{file_name}_nonscore.h5",
+            custom_objects={'logloss': logloss})
+
+        valid_metric_old = m_nn.evaluate([X_valid_1, X_valid_2],
+                                         y_valid_2,
+                                         verbose=0)[0]  # loss
+        print('After non-scored training: validation_loss =', valid_metric_old)
+
+        # Scored Training #
+
+        answer5 = Sequential(
+            [layers.BatchNormalization(),
+             layers.Dense(Y.shape[1], "sigmoid")])(answer4)
+
+        m_nn = tf.keras.Model([input1_, input2_], answer5)
+
+        m_nn.compile(optimizer=optimizers.Adam(learning_rate=0.001),
+                     loss=losses.BinaryCrossentropy(
+                         label_smoothing=label_smoothing_alpha),
+                     metrics=logloss)
+
+        early_stopping = callbacks.EarlyStopping(min_delta=1e-5,
+                                                 monitor='val_loss',
+                                                 patience=10,
+                                                 verbose=1,
+                                                 mode='min',
+                                                 restore_best_weights=True)
+        check_point = callbacks.ModelCheckpoint(
+            f"{model_output_folder}/{file_name}.h5",
+            save_best_only=True,
+            verbose=0,
+            mode="min")
+        reduce_lr = callbacks.ReduceLROnPlateau(factor=0.5,
+                                                patience=4,
+                                                verbose=0,
+                                                mode="auto")
+
+        history = m_nn.fit([X_train_1, X_train_2],
+                           y_train_1,
+                           epochs=50,
+                           batch_size=128,
+                           validation_data=([X_valid_1, X_valid_2], y_valid_1),
+                           callbacks=[check_point, early_stopping, reduce_lr],
+                           verbose=0)
+        m_nn = tf.keras.models.load_model(
+            f"{model_output_folder}/{file_name}.h5",
+            custom_objects={'logloss': logloss})
+
+        # val_old = m_nn.predict([X_valid_1, X_valid_2])
+        # valid_metric_old = mean_logloss(val_old, y_valid_1)
+        valid_metric_old = m_nn.evaluate([X_valid_1, X_valid_2],
+                                         y_valid_1,
+                                         verbose=0)[0]  # loss
+        print('After scored training: validation_loss =', valid_metric_old)
+
+        m_nn.save(f'{model_output_folder}/tmp.h5')
+
+        print('Before loop: validation_loss =', valid_metric_old)
+
+        # big loop
+        loop = 1
+        while True:
+
+            # Freeze_weights(m_nn, to = 'last_frozen')
+            for i, layer in enumerate(m_nn.layers):
+                if layer.name == "last_frozen":
+                    layer.trainable = True
+                    break
+                else:
+                    layer.trainable = False
+
+            m_nn.compile(optimizer=tf.keras.optimizers.Adadelta(lr=0.001 / 3),
+                         loss=tf.losses.BinaryCrossentropy(
+                             label_smoothing=label_smoothing_alpha),
+                         metrics=logloss)
+
+            # Frozen Mode #
+
+            reps = 0
+            improved = 0
+            patience = 3
+            while True:
+                history = m_nn.fit([X_valid_1, X_valid_2],
+                                   y_valid_1,
+                                   epochs=1,
+                                   batch_size=128,
+                                   verbose=0)
+
+                # val_preds = m_nn.predict([X_valid_1, X_valid_2])
+                # valid_metric = mean_logloss(val_preds, y_valid_1)
+                valid_metric = m_nn.evaluate([X_valid_1, X_valid_2],
+                                             y_valid_1,
+                                             verbose=0)[0]
+
+                if valid_metric_old - valid_metric >= 1e-6:
+                    print('Improved:', valid_metric, 'from', valid_metric_old)
+                    reps += 1
+                    improved += 1
+                    valid_metric_old = valid_metric
+                    m_nn.save(f'{model_output_folder}/tmp.h5')
+                elif reps < patience:
+                    reps += 1
+                    pass
+                else:
+                    print('No Improvement, stopped')
+                    m_nn = tf.keras.models.load_model(
+                        f'{model_output_folder}/tmp.h5',
+                        custom_objects={'logloss': logloss})
+                    print(loop, 'loop ---> After Frozen-step best valid =',
+                          valid_metric_old, 'after', reps, 'epochs \n')
+
+                    break
+
+            # Should continue training instead?
+            # if (improved == 0):  # no progress? STOP!
+            #     break
+
+            # Unfrozen Mode #
+
+            # Unfreeze all layers
+            for i, layer in enumerate(m_nn.layers):
+                layer.trainable = True
+
+            m_nn.compile(optimizer=tf.keras.optimizers.Adadelta(lr=0.001 / 5),
+                         loss=tf.losses.BinaryCrossentropy(
+                             label_smoothing=label_smoothing_alpha),
+                         metrics=logloss)
+
+            reps = 0
+            improved = 0
+            patience = 3
+            while True:
+                history = m_nn.fit([X_valid_1, X_valid_2],
+                                   y_valid_1,
+                                   epochs=1,
+                                   batch_size=128,
+                                   verbose=0)
+
+                # val_preds = m_nn.predict([X_valid_1, X_valid_2])
+                # valid_metric = mean_logloss(val_preds, y_valid_1)
+                valid_metric = m_nn.evaluate([X_valid_1, X_valid_2],
+                                             y_valid_1,
+                                             verbose=0)[0]
+
+                if valid_metric_old - valid_metric >= 1e-6:
+                    print('Improved:', valid_metric, 'from', valid_metric_old)
+                    reps += 1
+                    improved += 1
+                    valid_metric_old = valid_metric
+                    m_nn.save(f'{model_output_folder}/tmp.h5')
+                elif reps < patience:
+                    reps += 1
+                    pass
+                else:
+                    print('No Improvement, stopped')
+                    m_nn = tf.keras.models.load_model(
+                        f'{model_output_folder}/tmp.h5',
+                        custom_objects={'logloss': logloss})
+                    print(loop, 'loop ---> After Non-frozen-step best valid =',
+                          valid_metric_old, 'after', reps, 'epochs \n')
+
+                    break
+
+            print("Total Non-frozen-step improved:", improved)
+            if (improved == 0):
+                break
+
+            loop += 1
+
+        # Save Final Model
+        m_nn.save(f'{model_output_folder}/{file_name}_final.h5')
+
+        # OOF Predictions and Score #
+
+        val_preds = m_nn.predict([X_valid_1, X_valid_2])
+        fold_valid_score = mean_logloss(val_preds, y_valid_1)
+
+        oof_predictions[valid_index, :] += val_preds / len(SEEDS)
+        print('\nSeed:', s, 'Fold:', k, 'score:', fold_valid_score)
+
+        # Generate Submission Prediction #
+        fold_submit_preds = m_nn.predict([X_test_1, X_test_2])
+        y_pred += fold_submit_preds / (KFOLDS * len(SEEDS))
+        print(fold_submit_preds[:5, :])
+
+        k += 1
+
+        print('\n')
+
+
+# In[14]:
+
+
+oof_loss = mean_logloss(oof_predictions, Y)
+print(f"OOF Validation Loss: {oof_loss:.6f}")
+
+
+# In[15]:
+
+
+with open(f'{model_output_folder}/oof_{oof_loss}.npy', 'wb') as f:
+    np.save(f, oof_predictions)
+
+with open(f'{model_output_folder}/oof_{oof_loss}.npy', 'rb') as f:
+    tmp = np.load(f)
+    print(tmp.shape)
+
+
+# # Submission
+
+# In[16]:
+
+
+sub.iloc[:, 1:] = y_pred
+# sub.iloc[:, 1:] = np.clip(y_pred, P_MIN, P_MAX)
+
+
+# In[17]:
+
+
+sub
+
+
+# In[18]:
+
+
+# Set ctl_vehicle to 0
+sub.iloc[test_features['cp_type'] == 'ctl_vehicle', 1:] = 0
+
+# Save Submission
+sub.to_csv('submission_2heads-looper-super-puper.csv', index=False)
+sub.to_csv('submission.csv', index=False)
+
+
+# In[19]:
+
+
+sub
+
+
+# In[ ]:
+
+
+
+

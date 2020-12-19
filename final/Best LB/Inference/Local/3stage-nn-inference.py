@@ -7,6 +7,8 @@
 
 
 import sys
+sys.path.append('../input/iterative-stratification/')
+sys.path.append('../input/umaplearn/umap')
 
 import os
 os.makedirs('model', exist_ok=True)
