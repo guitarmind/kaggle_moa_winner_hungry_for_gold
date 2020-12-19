@@ -1,45 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-"""
-Transform non-image features to an image matrix using t-SNE non-linear dimensionality reduction.
-
-[V2]
-* Reduce memory usage by transforming rows to images in real-time
-
-[V3]
-* Tuning architecture and performance
- - 1 FC ELU Layer without dropout, T_max=5 --> fold0 val_loss_epoch=0.014794
- 
-[V4]
-* 1 FC ELU Layer with dropout=0.5, T_max=5     --> worse,  fold0 val_loss_epoch=0.014915
-* CosineAnnealingWarmRestarts (T_0=5 epochs)   --> worse,  fold0 val_loss_epoch=0.014866
-* nn.SELU() (scaled exponential linear units)  --> better, fold0 val_loss_epoch=0.014761
-* Normalized RGB for pretrained models         --> worse,  fold0 val_loss_epoch=0.014933
-* nn.GELU() (Gaussian Error Linear Units)      --> worse,  fold0 val_loss_epoch=0.014877
-* SwapNoise (randomly swap features with p=0.15, portion=0.1)
-
-[V5]
-* SwapNoise (randomly swap features with p=0.3, portion=0.1)
-* 400 resolution/image size --> better, fold0 val_loss_epoch=0.014776
-
-[V6]
-* KernelPCA + PCA as 2nd and 3rd channels
-
-[V7]
-* Add Max./Min. Channels
-
-[TODO]
-* PCGrad (Project Conflicting Gradients)
-* Separate gene expression, cell vaibility and other features
-* Tuning resolution and image size
-
-EfficientNet Setup Parameters:
-https://github.com/rwightman/gen-efficientnet-pytorch/blob/master/geffnet/gen_efficientnet.py#L502
-"""
 
 kernel_mode = False
 training_mode = True
@@ -51,6 +12,21 @@ if kernel_mode:
     sys.path.insert(0, "../input/gen-efficientnet-pytorch")
     sys.path.insert(0, "../input/pytorch-optimizer")
     sys.path.insert(0, "../input/pytorch-ranger")
+
+import argparse
+model_artifact_name = "deepinsight-efficientnet-v7-b3"
+parser = argparse.ArgumentParser(description='Training DeepInsight EfficientNet B3 NS')
+parser.add_argument('input', metavar='INPUT',
+                    help='Input folder', default=".")
+parser.add_argument('output', metavar='OUTPUT',
+                    help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=48,
+                    help='Batch size for training')
+parser.add_argument('--infer-batch-size', type=int, default=96,
+                    help='Batch size for inference')
+args = parser.parse_args()
+input_folder = args.input
+output_folder = args.output
 
 import os
 import numpy as np
@@ -135,8 +111,8 @@ if kernel_mode:
     dataset_folder = "../input/lish-moa"
     model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-efficientnet-v7-b3/{experiment_name}"
 else:
-    dataset_folder = "/workspace/Kaggle/MoA"
-    model_output_folder = f"{dataset_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_efficientnet_v7_b3/{experiment_name}"
+    dataset_folder = input_folder
+    model_output_folder = f"{output_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_efficientnet_v7_b3/{experiment_name}"
 
 if training_mode:
     os.makedirs(model_output_folder, exist_ok=True)
@@ -171,31 +147,11 @@ T_0 = 5  # epochs
 accumulate_grad_batches = 1
 gradient_clip_val = 10.0
 
-if model_type == "b0":
-    batch_size = 128
-    infer_batch_size = 256
-    image_size = 224  # B0
-    drop_rate = 0.2  # B0
-    resolution = 224
-elif model_type == "b3":
-    batch_size = 48
-    infer_batch_size = 96 if not kernel_mode else 256
-    image_size = 300  # B3
-    drop_rate = 0.3  # B3
-    resolution = 300
-elif model_type == "b5":
-    batch_size = 12
-    infer_batch_size = 24
-    image_size = 456  # B5
-    drop_rate = 0.4  # B5
-    resolution = 456
-elif model_type == "b7":
-    batch_size = 2
-    infer_batch_size = 4
-    # image_size = 800  # B7
-    image_size = 875  # B7
-    drop_rate = 0.5  # B7
-    resolution = 875
+batch_size = args.batch_size
+infer_batch_size = args.infer_batch_size if not kernel_mode else 256
+image_size = 300  # B3
+drop_rate = 0.3  # B3
+resolution = 300
 
 # Prediction Clipping Thresholds
 prob_min = 0.001
@@ -1664,34 +1620,6 @@ if training_mode and best_model is not None:
     del best_model
     torch.cuda.empty_cache()
     gc.collect()
-
-
-# ## Submission
-
-# In[33]:
-
-
-print(kfold_submit_preds.shape)
-
-submission = pd.DataFrame(data=test_features["sig_id"].values,
-                          columns=["sig_id"])
-submission = submission.reindex(columns=["sig_id"] + train_classes)
-submission[train_classes] = kfold_submit_preds
-# Set control type to 0 as control perturbations have no MoAs
-submission.loc[test_features['cp_type'] == 0, submission.columns[1:]] = 0
-# submission.to_csv('submission.csv', index=False)
-submission.to_csv('submission_effnet_v7_b3.csv', index=False)
-
-
-# In[34]:
-
-
-submission
-
-
-# In[ ]:
-
-
 
 
 

@@ -23,6 +23,8 @@ import os
 os.makedirs(f'{output_folder}/model', exist_ok=True)
 os.makedirs(f'{output_folder}/interim', exist_ok=True)
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
 from iterstrat.ml_stratifiers import MultilabelStratifiedKFold, RepeatedMultilabelStratifiedKFold

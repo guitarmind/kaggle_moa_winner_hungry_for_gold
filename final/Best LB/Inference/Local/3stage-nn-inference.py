@@ -15,6 +15,8 @@ parser.add_argument('input', metavar='INPUT',
                     help='Input folder', default=".")
 parser.add_argument('output', metavar='OUTPUT',
                     help='Output folder', default=".")
+parser.add_argument('--batch-size', type=int, default=2048,
+                    help='Batch size')
 args = parser.parse_args()
 input_folder = args.input
 output_folder = args.output
@@ -23,7 +25,7 @@ import os
 os.makedirs(f'{output_folder}/model', exist_ok=True)
 os.makedirs(f'{output_folder}/interim', exist_ok=True)
 
-BATCH_SIZE = 2048
+BATCH_SIZE = args.batch_size
 
 from scipy.sparse.csgraph import connected_components
 from umap import UMAP
