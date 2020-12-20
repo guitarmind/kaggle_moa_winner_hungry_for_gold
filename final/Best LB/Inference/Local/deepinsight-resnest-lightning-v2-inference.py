@@ -115,10 +115,11 @@ experiment_name = f"deepinsight_ResNeSt_v2_{model_type}"
 
 if kernel_mode:
     dataset_folder = "../input/lish-moa"
-    model_output_folder = f"./{experiment_name}" if training_mode         else f"../input/deepinsight-resnest-v2-resnest50-output/{experiment_name}"
+    model_output_folder = f"./{experiment_name}" if training_mode \
+        else f"../input/deepinsight-resnest-v2-resnest50-output/{experiment_name}"
 else:
     dataset_folder = input_folder
-    model_output_folder = f"{model_folder}/{experiment_name}" if training_mode         else f"/workspace/Kaggle/MoA/completed/deepinsight_ResNeSt_v2_resnest50/{experiment_name}"
+    model_output_folder = f"{model_folder}/{experiment_name}"
 
 if training_mode:
     os.makedirs(model_output_folder, exist_ok=True)
@@ -1442,10 +1443,10 @@ if training_mode and best_model is not None:
 
     oof_filename = "_".join(
         [f"{k}={v}" for k, v in dict(best_model.hparams).items()])
-    with open(f'oof_{experiment_name}_{oof_loss}.npy', 'wb') as f:
+    with open(f'{model_folder}/oof_{experiment_name}_{oof_loss}.npy', 'wb') as f:
         np.save(f, oof_predictions)
 
-    with open(f'oof_{experiment_name}_{oof_loss}.npy', 'rb') as f:
+    with open(f'{model_folder}/oof_{experiment_name}_{oof_loss}.npy', 'rb') as f:
         tmp = np.load(f)
         print(tmp.shape)
 
