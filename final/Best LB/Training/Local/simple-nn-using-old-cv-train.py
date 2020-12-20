@@ -21,6 +21,8 @@ input_folder = args.input
 output_folder = args.output
 
 import os
+os.makedirs(output_folder, exist_ok=True)
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import numpy as np
