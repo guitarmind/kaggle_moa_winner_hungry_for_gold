@@ -4,6 +4,8 @@ This documentation outlines how to reproduce the 1st place solution by the ***Hu
 
 [Winning Solution Writeup in PDF](moa_hungry_for_gold_winning_solution_writeup.pdf)
 
+[How to Reproduce Winning Solution Locally](final/how_to_reproduce_locally.md)
+
 ## Archive Contents
 
 - In the `final` folder: All of the scripts used for the final submissions
@@ -91,6 +93,9 @@ The submission notebooks make inference by running each single-model inference s
 
 To make predictions on a new dataset, you just need to replace `test_features.csv` in input dataset.
 
+## How to Reproduce Winning Solution Locally
+
+Please refer to [this documentation](final/how_to_reproduce_locally.md).
 
 ## License
 
