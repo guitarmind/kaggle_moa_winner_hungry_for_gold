@@ -176,7 +176,7 @@ data = train_features.append(test_features)
 if IS_TRAIN:
     transformer = QuantileTransformer(n_quantiles=100, random_state=123, output_distribution="normal")
     transformer.fit(data.iloc[:,5:])
-    pd.to_pickle(transformer, f'{output_folder}/col}_quantile_transformer2.pkl')
+    pd.to_pickle(transformer, f'{output_folder}/{col}_quantile_transformer2.pkl')
 else:
     transformer = pd.read_pickle(f'{output_folder}/{col}_quantile_transformer2.pkl')  
 data_transformed = transformer.transform(data.iloc[:, 5:])
