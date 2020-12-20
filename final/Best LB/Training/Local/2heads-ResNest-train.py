@@ -105,7 +105,7 @@ sub.iloc[:, 1:] = 0
 
 # Import predictors from public kernel
 json_file_path = f'{PATH}/t-test-pca-rfe-logistic-regression/main_predictors.json' if kernel_mode \
-    else f"./main_predictors.json"
+    else f"{output_folder}/../main_predictors.json"
 
 with open(json_file_path, 'r') as j:
     predictors = json.loads(j.read())

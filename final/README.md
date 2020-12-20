@@ -15,17 +15,17 @@ It is recommended to run training and inference on a local machine with at least
 
 ## Training All Single Models
 
-Run the following shell script with the right absolute path for input dataset. All scripts should be ran from the `final` folder path.
+Run the following shell script with the right absolute paths for input dataset and model artifacts. All scripts should be ran from the `final` folder path.
 
 ```
-sh train.sh <input folder>
+sh train.sh <input folder> <model folder>
 ```
 
 All models will be saved under the `final` folder with fixed folder names.
 
 ## Run Inference on All Single Models
 
-Next, run the following shell script with the right absolute path for input dataset and models.
+Next, run the following shell script with the right absolute path for input dataset and trained model artifacts.
 
 ```
 sh inference.sh <input folder> <model folder> <output folder>
