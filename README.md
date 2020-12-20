@@ -4,7 +4,7 @@ This documentation outlines how to reproduce the 1st place solution by the ***Hu
 
 [Winning Solution Writeup in PDF](moa_hungry_for_gold_winning_solution_writeup.pdf)
 
-[How to Reproduce Winning Solution Locally](final/how_to_reproduce_locally.md)
+[How to Reproduce Winning Solution Locally](final/README.md)
 
 ## Archive Contents
 
@@ -95,7 +95,7 @@ To make predictions on a new dataset, you just need to replace `test_features.cs
 
 ## How to Reproduce Winning Solution Locally
 
-Please refer to [this documentation](final/how_to_reproduce_locally.md).
+Please refer to [this documentation](final/README.md).
 
 ## License
 
