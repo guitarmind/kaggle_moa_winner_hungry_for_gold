@@ -93,6 +93,9 @@ The submission notebooks make inference by running each single-model inference s
 
 To make predictions on a new dataset, you just need to replace `test_features.csv` in input dataset.
 
+## How to Reproduce Winning Solution Locally
+
+Please refer to [this documentation](final/Best%20LB/how_to_reproduce_locally.md).
 
 ## License
 
