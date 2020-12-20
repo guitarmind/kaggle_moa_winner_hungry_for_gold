@@ -17,6 +17,8 @@ input_folder = args.input
 prediction_folder = args.predictions
 output_folder = args.output
 
+print("Generating winning solution submission file ......")
+
 sub1 = pd.read_csv(f'{prediction_folder}/submission_3stage_nn_0.01822.csv')
 sub2 = pd.read_csv(f'{prediction_folder}/submission_2heads_resnet_0.01836.csv')
 sub3 = pd.read_csv(f'{prediction_folder}/submission_simpleNN_newcv_0.01830.csv')
@@ -32,5 +34,6 @@ submission.iloc[:, 1:] = (sub1.iloc[:,1:]*0.37 + \
     sub6.iloc[:,1:]*0.1 + \
     sub7.iloc[:,1:]*0.09 + \
     sub2.iloc[:,1:]*0.09
-submission.to_csv(f'{output_folder}/winning_submission.csv', index=False)
 
+submission.to_csv(f'{output_folder}/winning_submission.csv', index=False)
+print("DONE!")
