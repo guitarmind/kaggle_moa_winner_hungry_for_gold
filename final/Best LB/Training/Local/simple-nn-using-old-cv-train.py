@@ -598,7 +598,7 @@ def run_training(fold, seed):
             
             best_loss = valid_loss
             oof[val_idx] = valid_preds
-            torch.save(model.state_dict(), f"{output_folder}/{seed}_FOLD{fold}_.pth")
+            torch.save(model.state_dict(), f"{output_folder}/SEED{seed}_FOLD{fold}_.pth")
         
         elif(EARLY_STOP == True):
             
